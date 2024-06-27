@@ -1,125 +1,253 @@
+import 'dart:math' as math;
+
+import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() => runApp(const DiagramApp());
+
+class DiagramApp extends StatefulWidget {
+  const DiagramApp({super.key});
+
+  @override
+  DiagramAppState createState() => DiagramAppState();
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DiagramAppState extends State<DiagramApp> {
+  MyPolicySet myPolicySet = MyPolicySet();
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+      home: Scaffold(
+        body: SafeArea(
+          child: Stack(
+            children: [
+              const ColoredBox(color: Colors.grey),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: FlexiEditor(
+                  flexiEditorContext: FlexiEditorContext(policySet: myPolicySet),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => myPolicySet.deleteAllComponents(),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('delete all'),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () => myPolicySet.serialize(),
+                      child: const Text('serialize'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => myPolicySet.deserialize(),
+                      child: const Text('deserialize'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+// Custom component Data which you can assign to a component to dynamic data property.
+class MyComponentData {
+  MyComponentData();
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  bool isHighlightVisible = false;
+  Color color = Color((math.Random().nextDouble() * 0xFFFFFF).toInt()).withOpacity(1.0);
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  void showHighlight() {
+    isHighlightVisible = true;
+  }
 
-  final String title;
+  void hideHighlight() {
+    isHighlightVisible = false;
+  }
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  // Function used to deserialize the diagram. Must be passed to `canvasWriter.model.deserializeDiagram` for proper deserialization.
+  MyComponentData.fromJson(Map<String, dynamic> json)
+      : isHighlightVisible = json['highlight'],
+        color = Color(int.parse(json['color'], radix: 16));
+
+  // Function used to serialization of the diagram. E.g. to save to a file.
+  Map<String, dynamic> toJson() => {
+        'highlight': isHighlightVisible,
+        'color': color.toString().split('(0x')[1].split(')')[0],
+      };
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+// A set of policies compound of mixins. There are some custom policy implementations and some policies defined by diagram_editor library.
+class MyPolicySet extends PolicySet
+    with
+        MyInitPolicy,
+        MyComponentDesignPolicy,
+        MyCanvasPolicy,
+        MyComponentPolicy,
+        CustomPolicy,
+        //
+        CanvasControlPolicy,
+        LinkControlPolicy,
+        LinkJointControlPolicy,
+        LinkAttachmentRectPolicy {}
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+// A place where you can init the canvas or your diagram (eg. load an existing diagram).
+mixin MyInitPolicy implements InitPolicy {
+  @override
+  void initializeDiagramEditor() {
+    canvasWriter.state.setCanvasColor(Colors.grey[300]!);
+  }
+}
+
+// This is the place where you can design a component.
+// Use switch on componentData.type or componentData.data to define different component designs.
+mixin MyComponentDesignPolicy implements ComponentDesignPolicy {
+  @override
+  Widget showComponentBody(ComponentData componentData) {
+    return Container(
+      decoration: BoxDecoration(
+        color: (componentData.data as MyComponentData).color,
+        border: Border.all(
+          width: 2,
+          color: (componentData.data as MyComponentData).isHighlightVisible ? Colors.pink : Colors.black,
+        ),
+      ),
+      child: const Center(child: Text('component')),
+    );
+  }
+}
+
+// You can override the behavior of any gesture on canvas here.
+// Note that it also implements CustomPolicy where own variables and functions can be defined and used here.
+mixin MyCanvasPolicy implements CanvasPolicy, CustomPolicy {
+  @override
+  void onCanvasTapUp(TapUpDetails details) {
+    canvasWriter.model.hideAllLinkJoints();
+    if (selectedComponentId != null) {
+      hideComponentHighlight(selectedComponentId);
+    } else {
+      canvasWriter.model.addComponent(
+        ComponentData(
+          size: const Size(96, 72),
+          position: canvasReader.state.fromCanvasCoordinates(details.localPosition),
+          data: MyComponentData(),
+        ),
+      );
+    }
+  }
+}
+
+// Mixin where component behaviour is defined. In this example it is the movement, highlight and connecting two components.
+mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
+  // variable used to calculate delta offset to move the component.
+  late Offset lastFocalPoint;
+
+  @override
+  void onComponentTap(String componentId) {
+    canvasWriter.model.hideAllLinkJoints();
+
+    bool connected = connectComponents(selectedComponentId, componentId);
+    hideComponentHighlight(selectedComponentId);
+    if (!connected) {
+      highlightComponent(componentId);
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+  void onComponentLongPress(String componentId) {
+    hideComponentHighlight(selectedComponentId);
+    canvasWriter.model.hideAllLinkJoints();
+    canvasWriter.model.removeComponent(componentId);
+  }
+
+  @override
+  void onComponentScaleStart(componentId, details) {
+    lastFocalPoint = details.localFocalPoint;
+  }
+
+  @override
+  void onComponentScaleUpdate(componentId, details) {
+    Offset positionDelta = details.localFocalPoint - lastFocalPoint;
+    canvasWriter.model.moveComponent(componentId, positionDelta);
+    lastFocalPoint = details.localFocalPoint;
+  }
+
+  // This function tests if it's possible to connect the components and if yes, connects them
+  bool connectComponents(String? sourceComponentId, String? targetComponentId) {
+    if (sourceComponentId == null || targetComponentId == null) {
+      return false;
+    }
+    // tests if the ids are not same (the same component)
+    if (sourceComponentId == targetComponentId) {
+      return false;
+    }
+    // tests if the connection between two components already exists (one way)
+    if (canvasReader.model.getComponent(sourceComponentId).connections.any(
+          (connection) => (connection is ConnectionOut) && (connection.otherComponentId == targetComponentId),
+        )) {
+      return false;
+    }
+
+    // This connects two components (creates a link between), you can define the design of the link with LinkStyle.
+    canvasWriter.model.connectTwoComponents(
+      sourceComponentId: sourceComponentId,
+      targetComponentId: targetComponentId,
+      linkStyle: LinkStyle(
+        arrowType: ArrowType.pointedArrow,
+        lineWidth: 1.5,
+        backArrowType: ArrowType.centerCircle,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+
+    return true;
+  }
+}
+
+// You can create your own Policy to define own variables and functions with canvasReader and canvasWriter.
+mixin CustomPolicy implements PolicySet {
+  String? selectedComponentId;
+  String serializedDiagram = '{"components": [], "links": []}';
+
+  void highlightComponent(String componentId) {
+    canvasReader.model.getComponent(componentId).data.showHighlight();
+    canvasReader.model.getComponent(componentId).updateComponent();
+    selectedComponentId = componentId;
+  }
+
+  void hideComponentHighlight(String? componentId) {
+    if (componentId != null) {
+      canvasReader.model.getComponent(componentId).data.hideHighlight();
+      canvasReader.model.getComponent(componentId).updateComponent();
+      selectedComponentId = null;
+    }
+  }
+
+  void deleteAllComponents() {
+    selectedComponentId = null;
+    canvasWriter.model.removeAllComponents();
+  }
+
+  // Save the diagram to String in json format.
+  void serialize() {
+    serializedDiagram = canvasReader.model.serializeFlexi();
+  }
+
+  // Load the diagram from json format. Do it cautiously, to prevent unstable state remove the previous diagram (id collision can happen).
+  void deserialize() {
+    canvasWriter.model.removeAllComponents();
+    canvasWriter.model.deserializeFlexi(
+      serializedDiagram,
+      decodeCustomComponentData: MyComponentData.fromJson,
+      decodeCustomLinkData: null,
     );
   }
 }
