@@ -177,6 +177,7 @@ mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
   @override
   void onComponentScaleUpdate(componentId, details) {
     Offset positionDelta = details.localFocalPoint - lastFocalPoint;
+
     canvasWriter.model.moveComponent(componentId, positionDelta);
     lastFocalPoint = details.localFocalPoint;
   }

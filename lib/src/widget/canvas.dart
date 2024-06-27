@@ -1,9 +1,9 @@
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
+import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -20,18 +20,19 @@ class FlexiEditorCanvas extends StatefulWidget {
   FlexiEditorCanvasState createState() => FlexiEditorCanvasState();
 }
 
-class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
-    with TickerProviderStateMixin {
+class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
   PolicySet? withControlPolicy;
+
   final _keyboardFocusNode = FocusNode();
+  bool _isSpacePressed = false;
+  SystemMouseCursor _mouseCursor = SystemMouseCursors.grab;
+  Offset? _selectDragStartPosition;
+  Offset? _selectCurrentDragPosition;
 
   @override
   void initState() {
     withControlPolicy = //
-        widget.policy is CanvasControlPolicy ||
-                widget.policy is CanvasMovePolicy
-            ? widget.policy
-            : null;
+        widget.policy is CanvasControlPolicy || widget.policy is CanvasMovePolicy ? widget.policy : null;
 
     (withControlPolicy as CanvasControlPolicy?)?.setAnimationController(
       AnimationController(
@@ -83,8 +84,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, data, child) {
-              return widget.policy
-                  .showCustomWidgetWithComponentDataUnder(context, data);
+              return widget.policy.showCustomWidgetWithComponentDataUnder(context, data);
             },
           );
         },
@@ -99,8 +99,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, data, child) {
-              return widget.policy
-                  .showCustomWidgetWithComponentDataOver(context, data);
+              return widget.policy.showCustomWidgetWithComponentDataOver(context, data);
             },
           );
         },
@@ -123,11 +122,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
       children: [
         ...showBackgroundWidgets(),
         ...showOtherWithComponentDataUnder(canvasModel),
-        if (widget.policy.showLinksOnTopOfComponents)
-          ...showComponents(canvasModel),
+        if (widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
         ...showLinks(canvasModel),
-        if (!widget.policy.showLinksOnTopOfComponents)
-          ...showComponents(canvasModel),
+        if (!widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
         ...showOtherWithComponentDataOver(canvasModel),
         ...showForegroundWidgets(),
       ],
@@ -135,8 +132,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   Widget canvasAnimated(CanvasModel canvasModel) {
-    final animationController =
-        (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    final animationController = (withControlPolicy as CanvasControlPolicy).getAnimationController();
     if (animationController == null) return canvasStack(canvasModel);
 
     return AnimatedBuilder(
@@ -157,27 +153,34 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     );
   }
 
-  KeyEventResult _onKeyboardEvent(FocusNode node, KeyEvent event) {
-    final isControlPressed = HardwareKeyboard.instance.isControlPressed ||
-        HardwareKeyboard.instance.isMetaPressed;
+  /// 마우스 커서 변경
+  void _onMouseGrabCursor(bool grabbing) {
+    setState(() => _mouseCursor = grabbing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab);
+  }
 
-    if (isControlPressed &&
-        HardwareKeyboard.instance.isLogicalKeyPressed(event.logicalKey)) {
+  /// 키보드 이벤트
+  KeyEventResult _onKeyboardEvent(FocusNode node, KeyEvent event) {
+    final isControlPressed = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+
+    if (event.logicalKey == LogicalKeyboardKey.space) {
+      if (event is KeyDownEvent) {
+        setState(() {
+          _isSpacePressed = true;
+        });
+      } else if (event is KeyUpEvent) {
+        setState(() {
+          _isSpacePressed = false;
+        });
+      }
+
+      return KeyEventResult.handled;
+    }
+
+    if (isControlPressed && HardwareKeyboard.instance.isLogicalKeyPressed(event.logicalKey)) {
       if (event is KeyDownEvent) {
         print('Control + ${event.logicalKey.keyLabel}');
       }
     }
-
-    // if (HardwareKeyboard.instance.isControlPressed ||
-    //     HardwareKeyboard.instance.isShiftPressed ||
-    //     HardwareKeyboard.instance.isAltPressed ||
-    //     HardwareKeyboard.instance.isMetaPressed) {
-    //   print('Modifier pressed: $event');
-    // }
-    // if (HardwareKeyboard.instance
-    //     .isLogicalKeyPressed(LogicalKeyboardKey.keyA)) {
-    //   print('Key A pressed.');
-    // }
 
     return KeyEventResult.ignored;
   }
@@ -198,37 +201,87 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           child: AbsorbPointer(
             absorbing: canvasState.shouldAbsorbPointer,
             child: Listener(
-              onPointerSignal: (PointerSignalEvent event) =>
-                  widget.policy.onCanvasPointerSignal(event),
-              child: GestureDetector(
-                onScaleStart: (details) =>
-                    widget.policy.onCanvasScaleStart(details),
-                onScaleUpdate: (details) =>
-                    widget.policy.onCanvasScaleUpdate(details),
-                onScaleEnd: (details) =>
-                    widget.policy.onCanvasScaleEnd(details),
-                onTap: () => widget.policy.onCanvasTap(),
-                onTapDown: (TapDownDetails details) =>
-                    widget.policy.onCanvasTapDown(details),
-                onTapUp: (TapUpDetails details) =>
-                    widget.policy.onCanvasTapUp(details),
-                onTapCancel: () => widget.policy.onCanvasTapCancel(),
-                onLongPress: () => widget.policy.onCanvasLongPress(),
-                onLongPressStart: (LongPressStartDetails details) =>
-                    widget.policy.onCanvasLongPressStart(details),
-                onLongPressMoveUpdate: (LongPressMoveUpdateDetails details) =>
-                    widget.policy.onCanvasLongPressMoveUpdate(details),
-                onLongPressEnd: (LongPressEndDetails details) =>
-                    widget.policy.onCanvasLongPressEnd(details),
-                onLongPressUp: () => widget.policy.onCanvasLongPressUp(),
-                child: Container(
-                  color: canvasState.color,
-                  child: ClipRect(
-                    child: (withControlPolicy != null)
-                        ? canvasAnimated(canvasModel)
-                        : canvasStack(canvasModel),
+              onPointerSignal: widget.policy.onCanvasPointerSignal,
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onScaleStart: widget.policy.onCanvasScaleStart,
+                    onScaleUpdate: widget.policy.onCanvasScaleUpdate,
+                    onScaleEnd: widget.policy.onCanvasScaleEnd,
+                    onTap: widget.policy.onCanvasTap,
+                    onTapDown: widget.policy.onCanvasTapDown,
+                    onTapUp: widget.policy.onCanvasTapUp,
+                    onTapCancel: widget.policy.onCanvasTapCancel,
+                    onLongPress: widget.policy.onCanvasLongPress,
+                    onLongPressStart: (details) {
+                      setState(() {
+                        _selectDragStartPosition = details.localPosition;
+                        _selectCurrentDragPosition = details.localPosition;
+                      });
+                      widget.policy.onCanvasLongPressStart(details);
+                    },
+                    onLongPressMoveUpdate: (details) {
+                      setState(() {
+                        _selectCurrentDragPosition = details.localPosition;
+                      });
+
+                      widget.policy.onCanvasLongPressMoveUpdate(details);
+                    },
+                    onLongPressEnd: (details) {
+                      setState(() {
+                        _selectDragStartPosition = null;
+                        _selectCurrentDragPosition = null;
+                      });
+                      widget.policy.onCanvasLongPressEnd(details);
+                    },
+                    onLongPressUp: widget.policy.onCanvasLongPressUp,
+                    child: Container(
+                      color: canvasState.color,
+                      child: ClipRect(
+                        child: (withControlPolicy != null) //
+                            ? canvasAnimated(canvasModel)
+                            : canvasStack(canvasModel),
+                      ),
+                    ),
                   ),
-                ),
+
+                  //#region 드래그 영역
+                  if (_selectDragStartPosition != null && _selectCurrentDragPosition != null)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: SelectionBoxPainter(
+                          startPosition: _selectDragStartPosition!,
+                          endPosition: _selectCurrentDragPosition!,
+                        ),
+                      ),
+                    ),
+                  //#endregion
+
+                  //#region Grabbing Area
+                  if (_isSpacePressed)
+                    Positioned.fill(
+                      child: MouseRegion(
+                        cursor: _mouseCursor,
+                        child: GestureDetector(
+                          onScaleStart: (details) {
+                            _onMouseGrabCursor(true);
+                            widget.policy.onCanvasScaleStart(details);
+                          },
+                          onScaleUpdate: widget.policy.onCanvasScaleUpdate,
+                          onScaleEnd: (details) {
+                            _onMouseGrabCursor(false);
+                            widget.policy.onCanvasScaleEnd(details);
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            color: Colors.black12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  //#endregion
+                ],
               ),
             ),
           ),

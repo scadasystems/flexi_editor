@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -68,8 +70,7 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void _updateCanvasModelWithLastValues() {
-    canvasWriter.state
-        .setPosition((_basePosition * transformScale) + transformPosition);
+    canvasWriter.state.setPosition((_basePosition * transformScale) + transformPosition);
     canvasWriter.state.setScale(transformScale * _baseScale);
     canUpdateCanvasModel = false;
   }
@@ -77,9 +78,12 @@ mixin CanvasControlPolicy on BasePolicySet {
   void onCanvasPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
 
-    double scaleChange = event.scrollDelta.dy < 0
-        ? (1 / canvasReader.state.mouseScaleSpeed)
-        : (canvasReader.state.mouseScaleSpeed);
+    // double scaleChange = event.scrollDelta.dy < 0 //
+    //     ? 1 / canvasReader.state.mouseScaleSpeed
+    //     : canvasReader.state.mouseScaleSpeed;
+
+    //TODO: [스튜디오] Zoom 가속도 계산
+    double scaleChange = math.exp(-event.scrollDelta.dy / 1000);
 
     scaleChange = keepScaleInBounds(scaleChange, canvasReader.state.scale);
 
@@ -92,8 +96,7 @@ mixin CanvasControlPolicy on BasePolicySet {
     canvasWriter.state.updateScale(scaleChange);
 
     var focalPoint = (event.localPosition - canvasReader.state.position);
-    var focalPointScaled =
-        focalPoint * (canvasReader.state.scale / previousScale);
+    var focalPointScaled = focalPoint * (canvasReader.state.scale / previousScale);
 
     canvasWriter.state.updatePosition(focalPoint - focalPointScaled);
     canvasWriter.state.updateCanvas();
