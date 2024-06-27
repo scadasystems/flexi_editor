@@ -1,6 +1,6 @@
 import 'package:flexi_editor/flexi_editor.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
-import 'package:flexi_editor/src/canvas_context/canvas_scale_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
 import 'package:flexi_editor/src/widget/canvas.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +39,7 @@ class FlexiEditorState extends State<FlexiEditor> {
           value: widget.flexiEditorContext.canvasState,
         ),
         ChangeNotifierProvider(
-          create: (context) => CanvasScaleEvent(),
+          create: (context) => CanvasEvent(),
         ),
       ],
       builder: (context, child) {

@@ -1,19 +1,28 @@
 import 'package:flexi_editor/flexi_editor.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+typedef SelectionRectChangedCallback = Function(Rect selectionRect);
+typedef KeyboardEventCallback = Function(KeyEvent keyEvent);
 
 class FlexiEditorCanvas extends StatefulWidget {
   final PolicySet policy;
+  final SelectionRectChangedCallback? onSelectionRectChanged;
+  final KeyboardEventCallback? onKeyboardEvent;
 
+  /// - [policy]: 캔버스 정책
+  /// - [onSelectionRectChanged]: 선택 영역 변경 이벤트
   const FlexiEditorCanvas({
     super.key,
     required this.policy,
+    this.onSelectionRectChanged,
+    this.onKeyboardEvent,
   });
 
   @override
@@ -22,12 +31,6 @@ class FlexiEditorCanvas extends StatefulWidget {
 
 class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
   PolicySet? withControlPolicy;
-
-  final _keyboardFocusNode = FocusNode();
-  bool _isSpacePressed = false;
-  SystemMouseCursor _mouseCursor = SystemMouseCursors.grab;
-  Offset? _selectDragStartPosition;
-  Offset? _selectCurrentDragPosition;
 
   @override
   void initState() {
@@ -45,7 +48,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   @override
   void dispose() {
-    _keyboardFocusNode.dispose();
     (withControlPolicy as CanvasControlPolicy?)?.disposeAnimationController();
     super.dispose();
   }
@@ -153,49 +155,142 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     );
   }
 
-  /// 마우스 커서 변경
-  void _onMouseGrabCursor(bool grabbing) {
-    setState(() => _mouseCursor = grabbing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab);
+  /// 캔버스 스택
+  Widget _buildGestureDetector(BuildContext context) {
+    return Consumer3<CanvasModel, CanvasState, CanvasEvent>(
+      builder: (context, canvaseModel, canvasState, canvasEvent, child) {
+        return GestureDetector(
+          // onScaleStart: widget.policy.onCanvasScaleStart,
+          // onScaleUpdate: widget.policy.onCanvasScaleUpdate,
+          // onScaleEnd: widget.policy.onCanvasScaleEnd,
+          onScaleStart: canvasEvent.startSelectDragPosition,
+          onScaleUpdate: canvasEvent.updateSelectDragPosition,
+          onScaleEnd: (details) => canvasEvent.endSelectDragPosition(),
+          onTap: widget.policy.onCanvasTap,
+          onTapDown: widget.policy.onCanvasTapDown,
+          onTapUp: widget.policy.onCanvasTapUp,
+          onTapCancel: widget.policy.onCanvasTapCancel,
+          onLongPress: widget.policy.onCanvasLongPress,
+          onLongPressStart: widget.policy.onCanvasLongPressStart,
+          onLongPressMoveUpdate: widget.policy.onCanvasLongPressMoveUpdate,
+          onLongPressEnd: widget.policy.onCanvasLongPressEnd,
+          onLongPressUp: widget.policy.onCanvasLongPressUp,
+          child: Container(
+            color: canvasState.color,
+            child: ClipRect(
+              child: (withControlPolicy != null)
+                  ? canvasAnimated(context.read<CanvasModel>())
+                  : canvasStack(context.read<CanvasModel>()),
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  /// 키보드 이벤트
-  KeyEventResult _onKeyboardEvent(FocusNode node, KeyEvent event) {
-    final isControlPressed = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+  /// 선택 드래그 영역
+  Widget _buildSelectionBox(BuildContext context) {
+    return Consumer2<CanvasEvent, CanvasModel>(
+      builder: (context, canvasEvent, canvasModel, child) {
+        if (canvasEvent.startDragPosition != null && //
+            canvasEvent.currentDragPosition != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // canvasEvent.selectComponentsInDragArea(canvasModel);
+            final selectionRect = Rect.fromPoints(
+              canvasEvent.startDragPosition!,
+              canvasEvent.currentDragPosition!,
+            );
 
-    if (event.logicalKey == LogicalKeyboardKey.space) {
-      if (event is KeyDownEvent) {
-        setState(() {
-          _isSpacePressed = true;
-        });
-      } else if (event is KeyUpEvent) {
-        setState(() {
-          _isSpacePressed = false;
-        });
-      }
+            widget.onSelectionRectChanged?.call(selectionRect);
+          });
 
-      return KeyEventResult.handled;
-    }
+          return Positioned.fill(
+            child: CustomPaint(
+              painter: SelectionBoxPainter(
+                startPosition: canvasEvent.startDragPosition!,
+                endPosition: canvasEvent.currentDragPosition!,
+              ),
+            ),
+          );
+        }
 
-    if (isControlPressed && HardwareKeyboard.instance.isLogicalKeyPressed(event.logicalKey)) {
-      if (event is KeyDownEvent) {
-        print('Control + ${event.logicalKey.keyLabel}');
-      }
-    }
+        return const SizedBox.shrink();
+      },
+    );
+  }
 
-    return KeyEventResult.ignored;
+  /// 스페이스 누를 때 마우스 커서
+  Widget _buildGrabbingArea(BuildContext context) {
+    return Consumer<CanvasEvent>(
+      builder: (context, canvasEvent, child) {
+        if (canvasEvent.isSpacePressed) {
+          return Positioned.fill(
+            child: MouseRegion(
+              cursor: canvasEvent.mouseCursor,
+              child: GestureDetector(
+                onScaleStart: (details) {
+                  canvasEvent.setMouseGrabCursor(true);
+                  widget.policy.onCanvasScaleStart(details);
+                },
+                onScaleUpdate: widget.policy.onCanvasScaleUpdate,
+                onScaleEnd: (details) {
+                  canvasEvent.setMouseGrabCursor(false);
+                  widget.policy.onCanvasScaleEnd(details);
+                },
+              ),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (event) => context.read<CanvasEvent>().requestFocus(),
+      onExit: (event) => context.read<CanvasEvent>().unfocus(),
+      child: Focus(
+        focusNode: context.read<CanvasEvent>().keyboardFocusNode,
+        onKeyEvent: context.read<CanvasEvent>().onKeyboardEvent,
+        child: Consumer<CanvasState>(
+          builder: (context, canvasState, child) {
+            return RepaintBoundary(
+              key: canvasState.canvasGlobalKey,
+              child: AbsorbPointer(
+                absorbing: canvasState.shouldAbsorbPointer,
+                child: Listener(
+                  onPointerSignal: widget.policy.onCanvasPointerSignal,
+                  child: Stack(
+                    children: [
+                      _buildGestureDetector(context),
+                      _buildSelectionBox(context),
+                      _buildGrabbingArea(context),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /*
+  @override
+  Widget build(BuildContext context) {
     final canvasModel = Provider.of<CanvasModel>(context);
     final canvasState = Provider.of<CanvasState>(context);
+    final canvasEvent = Provider.of<CanvasEvent>(context);
 
     return MouseRegion(
-      onEnter: (event) => _keyboardFocusNode.requestFocus(),
-      onExit: (event) => _keyboardFocusNode.unfocus(),
+      onEnter: (event) => canvasEvent.requestFocus(),
+      onExit: (event) => canvasEvent.unfocus(),
       child: Focus(
-        focusNode: _keyboardFocusNode,
-        onKeyEvent: _onKeyboardEvent,
+        focusNode: canvasEvent.keyboardFocusNode,
+        onKeyEvent: canvasEvent.onKeyboardEvent,
         child: RepaintBoundary(
           key: canvasState.canvasGlobalKey,
           child: AbsorbPointer(
@@ -214,24 +309,15 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
                     onTapCancel: widget.policy.onCanvasTapCancel,
                     onLongPress: widget.policy.onCanvasLongPress,
                     onLongPressStart: (details) {
-                      setState(() {
-                        _selectDragStartPosition = details.localPosition;
-                        _selectCurrentDragPosition = details.localPosition;
-                      });
+                      canvasEvent.startSelectDragPosition(details.localPosition);
                       widget.policy.onCanvasLongPressStart(details);
                     },
                     onLongPressMoveUpdate: (details) {
-                      setState(() {
-                        _selectCurrentDragPosition = details.localPosition;
-                      });
-
+                      canvasEvent.updateSelectDragPosition(details.localPosition);
                       widget.policy.onCanvasLongPressMoveUpdate(details);
                     },
                     onLongPressEnd: (details) {
-                      setState(() {
-                        _selectDragStartPosition = null;
-                        _selectCurrentDragPosition = null;
-                      });
+                      canvasEvent.endSelectDragPosition();
                       widget.policy.onCanvasLongPressEnd(details);
                     },
                     onLongPressUp: widget.policy.onCanvasLongPressUp,
@@ -245,31 +331,42 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
                     ),
                   ),
 
+                  //#region 길게 누를 때 표시
+                  if (canvasEvent.selectDragStartPosition != null && canvasEvent.selectCurrentDragPosition == null)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: SelectionPressCirclePainter(
+                          canvasEvent.selectDragStartPosition!,
+                        ),
+                      ),
+                    ),
+                  //#endregion
+
                   //#region 드래그 영역
-                  if (_selectDragStartPosition != null && _selectCurrentDragPosition != null)
+                  if (canvasEvent.selectDragStartPosition != null && canvasEvent.selectCurrentDragPosition != null)
                     Positioned.fill(
                       child: CustomPaint(
                         painter: SelectionBoxPainter(
-                          startPosition: _selectDragStartPosition!,
-                          endPosition: _selectCurrentDragPosition!,
+                          startPosition: canvasEvent.selectDragStartPosition!,
+                          endPosition: canvasEvent.selectCurrentDragPosition!,
                         ),
                       ),
                     ),
                   //#endregion
 
                   //#region Grabbing Area
-                  if (_isSpacePressed)
+                  if (canvasEvent.isSpacePressed)
                     Positioned.fill(
                       child: MouseRegion(
-                        cursor: _mouseCursor,
+                        cursor: canvasEvent.mouseCursor,
                         child: GestureDetector(
                           onScaleStart: (details) {
-                            _onMouseGrabCursor(true);
+                            canvasEvent.setMouseGrabCursor(true);
                             widget.policy.onCanvasScaleStart(details);
                           },
                           onScaleUpdate: widget.policy.onCanvasScaleUpdate,
                           onScaleEnd: (details) {
-                            _onMouseGrabCursor(false);
+                            canvasEvent.setMouseGrabCursor(false);
                             widget.policy.onCanvasScaleEnd(details);
                           },
                           child: Container(
@@ -289,4 +386,5 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       ),
     );
   }
+  */
 }
