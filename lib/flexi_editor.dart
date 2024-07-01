@@ -17,6 +17,8 @@ export 'src/abstraction_layer/policy/defaults/link_attachment_oval_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_attachment_rect_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_control_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_joint_control_policy.dart';
+export 'src/abstraction_layer/state/canvas_reader.dart';
+export 'src/abstraction_layer/state/canvas_writer.dart';
 export 'src/canvas_context/flexi_editor_context.dart';
 export 'src/canvas_context/model/component_data.dart';
 export 'src/canvas_context/model/connection.dart';

@@ -2,7 +2,7 @@ import 'package:flexi_editor/src/canvas_context/model/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-class ComponentData with ChangeNotifier {
+class ComponentData<T> with ChangeNotifier {
   final String id;
   Offset position;
   Size size;
@@ -12,7 +12,7 @@ class ComponentData with ChangeNotifier {
   String? parentId;
   final List<String> childrenIds = [];
   final List<Connection> connections = [];
-  final dynamic data;
+  final T? data;
 
   ComponentData({
     String? id,
@@ -23,8 +23,8 @@ class ComponentData with ChangeNotifier {
     this.data,
   })  : assert(minSize <= size),
         id = id ?? const Uuid().v4();
-        
-  void updateComponent() {
+
+  void refresh() {
     notifyListeners();
   }
 
@@ -32,12 +32,12 @@ class ComponentData with ChangeNotifier {
     position += offset;
     notifyListeners();
   }
-  
+
   void setPosition(Offset position) {
     this.position = position;
     notifyListeners();
   }
-  
+
   void addConnection(Connection connection) {
     connections.add(connection);
   }
@@ -122,6 +122,6 @@ class ComponentData with ChangeNotifier {
         'parent_id': parentId,
         'children_ids': childrenIds,
         'connections': connections,
-        'dynamic_data': data?.toJson(),
+        'dynamic_data': (data as dynamic)?.toJson(),
       };
 }

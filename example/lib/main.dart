@@ -220,14 +220,14 @@ mixin CustomPolicy implements PolicySet {
 
   void highlightComponent(String componentId) {
     canvasReader.model.getComponent(componentId).data.showHighlight();
-    canvasReader.model.getComponent(componentId).updateComponent();
+    canvasReader.model.getComponent(componentId).refresh();
     selectedComponentId = componentId;
   }
 
   void hideComponentHighlight(String? componentId) {
     if (componentId != null) {
       canvasReader.model.getComponent(componentId).data.hideHighlight();
-      canvasReader.model.getComponent(componentId).updateComponent();
+      canvasReader.model.getComponent(componentId).refresh();
       selectedComponentId = null;
     }
   }
