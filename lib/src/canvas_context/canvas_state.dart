@@ -54,4 +54,8 @@ class CanvasState with ChangeNotifier {
   Offset toCanvasCoordinates(Offset position) {
     return position * scale + this.position;
   }
+
+  double toCanvasSize(double size) {
+    return size * scale;
+  }
 }

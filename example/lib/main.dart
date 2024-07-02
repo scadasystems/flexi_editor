@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:example/rect_component.dart';
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flutter/material.dart';
 
@@ -103,7 +104,7 @@ class MyPolicySet extends PolicySet
 // A place where you can init the canvas or your diagram (eg. load an existing diagram).
 mixin MyInitPolicy implements InitPolicy {
   @override
-  void initializeDiagramEditor() {
+  void initializeEditor() {
     canvasWriter.state.setCanvasColor(Colors.grey[300]!);
   }
 }
@@ -113,15 +114,8 @@ mixin MyInitPolicy implements InitPolicy {
 mixin MyComponentDesignPolicy implements ComponentDesignPolicy {
   @override
   Widget showComponentBody(ComponentData componentData) {
-    return Container(
-      decoration: BoxDecoration(
-        color: (componentData.data as MyComponentData).color,
-        border: Border.all(
-          width: 2,
-          color: (componentData.data as MyComponentData).isHighlightVisible ? Colors.pink : Colors.black,
-        ),
-      ),
-      child: const Center(child: Text('component')),
+    return RectComponent(
+      componentData: componentData,
     );
   }
 }

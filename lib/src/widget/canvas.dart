@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
@@ -13,7 +14,9 @@ typedef KeyboardEventCallback = Function(KeyEvent keyEvent);
 
 class FlexiEditorCanvas extends StatefulWidget {
   final PolicySet policy;
-  final SelectionRectChangedCallback? onSelectionRectChanged;
+  final VoidCallback? onSelectionRectStart;
+  final SelectionRectChangedCallback? onSelectionRectUpdate;
+  final VoidCallback? onSelectionRectEnd;
   final KeyboardEventCallback? onKeyboardEvent;
 
   /// - [policy]: 캔버스 정책
@@ -21,7 +24,9 @@ class FlexiEditorCanvas extends StatefulWidget {
   const FlexiEditorCanvas({
     super.key,
     required this.policy,
-    this.onSelectionRectChanged,
+    this.onSelectionRectStart,
+    this.onSelectionRectUpdate,
+    this.onSelectionRectEnd,
     this.onKeyboardEvent,
   });
 
@@ -155,17 +160,36 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     );
   }
 
-  /// 캔버스 스택
+  /// 캔버스
   Widget _buildGestureDetector(BuildContext context) {
     return Consumer3<CanvasModel, CanvasState, CanvasEvent>(
       builder: (context, canvaseModel, canvasState, canvasEvent, child) {
         return GestureDetector(
-          // onScaleStart: widget.policy.onCanvasScaleStart,
-          // onScaleUpdate: widget.policy.onCanvasScaleUpdate,
-          // onScaleEnd: widget.policy.onCanvasScaleEnd,
-          onScaleStart: canvasEvent.startSelectDragPosition,
-          onScaleUpdate: canvasEvent.updateSelectDragPosition,
-          onScaleEnd: (details) => canvasEvent.endSelectDragPosition(),
+          onScaleStart: (details) {
+            widget.onSelectionRectStart?.call();
+
+            if (canvasEvent.isStartDragSelection) {
+              canvasEvent.startSelectDragPosition(details);
+            } else {
+              widget.policy.onCanvasScaleStartEvent(details);
+            }
+          },
+          onScaleUpdate: (details) {
+            if (canvasEvent.isStartDragSelection) {
+              canvasEvent.updateSelectDragPosition(details);
+            } else {
+              widget.policy.onCanvasScaleUpdateEvent(details);
+            }
+          },
+          onScaleEnd: (details) {
+            widget.onSelectionRectEnd?.call();
+
+            if (canvasEvent.isStartDragSelection) {
+              canvasEvent.endSelectDragPosition();
+            } else {
+              widget.policy.onCanvasScaleEndEvent(details);
+            }
+          },
           onTap: widget.policy.onCanvasTap,
           onTapDown: widget.policy.onCanvasTapDown,
           onTapUp: widget.policy.onCanvasTapUp,
@@ -190,18 +214,22 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   /// 선택 드래그 영역
   Widget _buildSelectionBox(BuildContext context) {
+    final canvasState = context.read<CanvasState>();
+
     return Consumer2<CanvasEvent, CanvasModel>(
       builder: (context, canvasEvent, canvasModel, child) {
         if (canvasEvent.startDragPosition != null && //
             canvasEvent.currentDragPosition != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            // canvasEvent.selectComponentsInDragArea(canvasModel);
+            final scale = canvasState.scale;
+            final position = canvasState.position;
+
             final selectionRect = Rect.fromPoints(
-              canvasEvent.startDragPosition!,
-              canvasEvent.currentDragPosition!,
+              (canvasEvent.startDragPosition! - position) / scale,
+              (canvasEvent.currentDragPosition! - position) / scale,
             );
 
-            widget.onSelectionRectChanged?.call(selectionRect);
+            widget.onSelectionRectUpdate?.call(selectionRect);
           });
 
           return Positioned.fill(
@@ -254,137 +282,20 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       child: Focus(
         focusNode: context.read<CanvasEvent>().keyboardFocusNode,
         onKeyEvent: context.read<CanvasEvent>().onKeyboardEvent,
-        child: Consumer<CanvasState>(
-          builder: (context, canvasState, child) {
-            return RepaintBoundary(
-              key: canvasState.canvasGlobalKey,
-              child: AbsorbPointer(
-                absorbing: canvasState.shouldAbsorbPointer,
-                child: Listener(
-                  onPointerSignal: widget.policy.onCanvasPointerSignal,
-                  child: Stack(
-                    children: [
-                      _buildGestureDetector(context),
-                      _buildSelectionBox(context),
-                      _buildGrabbingArea(context),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  /*
-  @override
-  Widget build(BuildContext context) {
-    final canvasModel = Provider.of<CanvasModel>(context);
-    final canvasState = Provider.of<CanvasState>(context);
-    final canvasEvent = Provider.of<CanvasEvent>(context);
-
-    return MouseRegion(
-      onEnter: (event) => canvasEvent.requestFocus(),
-      onExit: (event) => canvasEvent.unfocus(),
-      child: Focus(
-        focusNode: canvasEvent.keyboardFocusNode,
-        onKeyEvent: canvasEvent.onKeyboardEvent,
-        child: RepaintBoundary(
-          key: canvasState.canvasGlobalKey,
-          child: AbsorbPointer(
-            absorbing: canvasState.shouldAbsorbPointer,
-            child: Listener(
-              onPointerSignal: widget.policy.onCanvasPointerSignal,
-              child: Stack(
-                children: [
-                  GestureDetector(
-                    onScaleStart: widget.policy.onCanvasScaleStart,
-                    onScaleUpdate: widget.policy.onCanvasScaleUpdate,
-                    onScaleEnd: widget.policy.onCanvasScaleEnd,
-                    onTap: widget.policy.onCanvasTap,
-                    onTapDown: widget.policy.onCanvasTapDown,
-                    onTapUp: widget.policy.onCanvasTapUp,
-                    onTapCancel: widget.policy.onCanvasTapCancel,
-                    onLongPress: widget.policy.onCanvasLongPress,
-                    onLongPressStart: (details) {
-                      canvasEvent.startSelectDragPosition(details.localPosition);
-                      widget.policy.onCanvasLongPressStart(details);
-                    },
-                    onLongPressMoveUpdate: (details) {
-                      canvasEvent.updateSelectDragPosition(details.localPosition);
-                      widget.policy.onCanvasLongPressMoveUpdate(details);
-                    },
-                    onLongPressEnd: (details) {
-                      canvasEvent.endSelectDragPosition();
-                      widget.policy.onCanvasLongPressEnd(details);
-                    },
-                    onLongPressUp: widget.policy.onCanvasLongPressUp,
-                    child: Container(
-                      color: canvasState.color,
-                      child: ClipRect(
-                        child: (withControlPolicy != null) //
-                            ? canvasAnimated(canvasModel)
-                            : canvasStack(canvasModel),
-                      ),
-                    ),
-                  ),
-
-                  //#region 길게 누를 때 표시
-                  if (canvasEvent.selectDragStartPosition != null && canvasEvent.selectCurrentDragPosition == null)
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: SelectionPressCirclePainter(
-                          canvasEvent.selectDragStartPosition!,
-                        ),
-                      ),
-                    ),
-                  //#endregion
-
-                  //#region 드래그 영역
-                  if (canvasEvent.selectDragStartPosition != null && canvasEvent.selectCurrentDragPosition != null)
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: SelectionBoxPainter(
-                          startPosition: canvasEvent.selectDragStartPosition!,
-                          endPosition: canvasEvent.selectCurrentDragPosition!,
-                        ),
-                      ),
-                    ),
-                  //#endregion
-
-                  //#region Grabbing Area
-                  if (canvasEvent.isSpacePressed)
-                    Positioned.fill(
-                      child: MouseRegion(
-                        cursor: canvasEvent.mouseCursor,
-                        child: GestureDetector(
-                          onScaleStart: (details) {
-                            canvasEvent.setMouseGrabCursor(true);
-                            widget.policy.onCanvasScaleStart(details);
-                          },
-                          onScaleUpdate: widget.policy.onCanvasScaleUpdate,
-                          onScaleEnd: (details) {
-                            canvasEvent.setMouseGrabCursor(false);
-                            widget.policy.onCanvasScaleEnd(details);
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            height: double.infinity,
-                            color: Colors.black12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  //#endregion
-                ],
-              ),
+        child: AbsorbPointer(
+          absorbing: context.read<CanvasState>().shouldAbsorbPointer,
+          child: Listener(
+            onPointerSignal: widget.policy.onCanvasPointerSignal,
+            child: Stack(
+              children: [
+                _buildGestureDetector(context),
+                _buildSelectionBox(context),
+                _buildGrabbingArea(context),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-  */
 }
