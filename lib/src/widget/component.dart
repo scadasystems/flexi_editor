@@ -19,8 +19,6 @@ class Component extends StatelessWidget {
     final canvasState = Provider.of<CanvasState>(context);
     final canvasEvent = Provider.of<CanvasEvent>(context);
 
-    // print('${canvasEvent.isStartDragSelection} => ${DateTime.now()}');
-
     return Positioned(
       left: canvasState.scale * componentData.position.dx + canvasState.position.dx,
       top: canvasState.scale * componentData.position.dy + canvasState.position.dy,
@@ -53,14 +51,6 @@ class Component extends StatelessWidget {
           onScaleEnd: canvasEvent.isStartDragSelection
               ? (details) => policy.onComponentScaleEnd(componentData.id, details)
               : null,
-          // onTap: () => policy.onComponentTap(componentData.id),
-          // onTapDown: (TapDownDetails details) => policy.onComponentTapDown(componentData.id, details),
-          // onTapUp: (TapUpDetails details) => policy.onComponentTapUp(componentData.id, details),
-          // onTapCancel: () => policy.onComponentTapCancel(componentData.id),
-          // onScaleStart: (details) => policy.onComponentScaleStart(componentData.id, details),
-          // onScaleUpdate: (details) => policy.onComponentScaleUpdate(componentData.id, details),
-          // onScaleEnd: (details) => policy.onComponentScaleEnd(componentData.id, details),
-          //
           onLongPress: () => policy.onComponentLongPress(componentData.id),
           onLongPressStart: (details) => policy.onComponentLongPressStart(componentData.id, details),
           onLongPressMoveUpdate: (details) => policy.onComponentLongPressMoveUpdate(componentData.id, details),
