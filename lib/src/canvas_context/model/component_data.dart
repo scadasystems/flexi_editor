@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flexi_editor/src/canvas_context/model/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -86,11 +87,6 @@ class ComponentData<T> with ChangeNotifier {
     childrenIds.remove(childId);
   }
 
-  @override
-  String toString() {
-    return 'Component data ($id), position: $position';
-  }
-
   ComponentData.fromJson(
     Map<String, dynamic> json, {
     Function(Map<String, dynamic> json)? decodeCustomComponentData,
@@ -124,4 +120,9 @@ class ComponentData<T> with ChangeNotifier {
         'connections': connections,
         'dynamic_data': (data as dynamic)?.toJson(),
       };
+
+  @override
+  String toString() {
+    return 'ComponentData(id: $id, position: $position, size: $size, minSize: $minSize, type: $type, zOrder: $zOrder, parentId: $parentId, childrenIds: $childrenIds)';
+  }
 }

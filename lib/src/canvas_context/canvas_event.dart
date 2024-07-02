@@ -1,19 +1,24 @@
-import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class CanvasEvent with ChangeNotifier {
   final _keyboardFocusNode = FocusNode();
-  bool _isSpacePressed = false;
-  SystemMouseCursor _mouseCursor = SystemMouseCursors.grab;
-  Offset? _startDragPosition;
-  Offset? _currentDragPosition;
-
   FocusNode get keyboardFocusNode => _keyboardFocusNode;
+
+  bool _isSpacePressed = false;
   bool get isSpacePressed => _isSpacePressed;
+
+  SystemMouseCursor _mouseCursor = SystemMouseCursors.grab;
   SystemMouseCursor get mouseCursor => _mouseCursor;
+
+  Offset? _startDragPosition;
   Offset? get startDragPosition => _startDragPosition;
+
+  Offset? _currentDragPosition;
   Offset? get currentDragPosition => _currentDragPosition;
+
+  bool _isStartDragSelection = true;
+  bool get isStartDragSelection => _isStartDragSelection;
 
   @override
   void dispose() {
@@ -43,6 +48,18 @@ class CanvasEvent with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 선택 드래그 시작
+  void startDragSelection() {
+    _isStartDragSelection = true;
+    notifyListeners();
+  }
+
+  /// 선택 드래그 종료
+  void stopDragSelection() {
+    _isStartDragSelection = false;
+    notifyListeners();
+  }
+
   /// 드래그 시작
   void startSelectDragPosition(ScaleStartDetails details) {
     _startDragPosition = details.localFocalPoint;
@@ -59,28 +76,6 @@ class CanvasEvent with ChangeNotifier {
   void endSelectDragPosition() {
     _startDragPosition = null;
     _currentDragPosition = null;
-    notifyListeners();
-  }
-
-  void selectComponentsInDragArea(CanvasModel canvasModel) {
-    if (startDragPosition == null || currentDragPosition == null) return;
-
-    final selectionRect = Rect.fromPoints(
-      startDragPosition!,
-      currentDragPosition!,
-    );
-
-    for (var component in canvasModel.components.values) {
-      final componentRect =
-          Rect.fromLTWH(component.position.dx, component.position.dy, component.size.width, component.size.height);
-
-      if (selectionRect.overlaps(componentRect)) {
-        // component.component.isSelected = true;
-      } else {
-        // component.isSelected = false;
-      }
-    }
-
     notifyListeners();
   }
 

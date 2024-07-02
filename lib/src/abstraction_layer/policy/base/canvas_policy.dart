@@ -18,6 +18,12 @@ mixin CanvasPolicy on BasePolicySet {
 
   void onCanvasScaleEnd(ScaleEndDetails details) {}
 
+  void onCanvasScaleStartEvent(ScaleStartDetails details) {}
+
+  void onCanvasScaleUpdateEvent(ScaleUpdateDetails details) {}
+
+  void onCanvasScaleEndEvent(ScaleEndDetails details) {}
+
   void onCanvasLongPressStart(LongPressStartDetails details) {}
 
   void onCanvasLongPressMoveUpdate(LongPressMoveUpdateDetails details) {}
