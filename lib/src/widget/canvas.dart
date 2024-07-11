@@ -39,8 +39,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   @override
   void initState() {
-    withControlPolicy = //
-        widget.policy is CanvasControlPolicy || widget.policy is CanvasMovePolicy ? widget.policy : null;
+    withControlPolicy = (widget.policy is CanvasControlPolicy) || (widget.policy is CanvasMovePolicy) //
+        ? widget.policy
+        : null;
 
     (withControlPolicy as CanvasControlPolicy?)?.setAnimationController(
       AnimationController(

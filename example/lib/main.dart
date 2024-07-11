@@ -65,15 +65,14 @@ class MyComponentData {
   MyComponentData();
 
   bool isHighlightVisible = false;
+  bool isHoverHighlight = false;
   Color color = Color((math.Random().nextDouble() * 0xFFFFFF).toInt()).withOpacity(1.0);
 
-  void showHighlight() {
-    isHighlightVisible = true;
-  }
+  void showHighlight() => isHighlightVisible = true;
+  void hideHighlight() => isHighlightVisible = false;
 
-  void hideHighlight() {
-    isHighlightVisible = false;
-  }
+  void showHoverHighlight() => isHoverHighlight = true;
+  void hideHoverHighlight() => isHoverHighlight = false;
 
   // Function used to deserialize the diagram. Must be passed to `canvasWriter.model.deserializeDiagram` for proper deserialization.
   MyComponentData.fromJson(Map<String, dynamic> json)
@@ -131,6 +130,7 @@ mixin MyCanvasPolicy implements CanvasPolicy, CustomPolicy {
     } else {
       canvasWriter.model.addComponent(
         ComponentData(
+          type: 'test',
           size: const Size(96, 72),
           position: canvasReader.state.fromCanvasCoordinates(details.localPosition),
           data: MyComponentData(),
@@ -144,6 +144,16 @@ mixin MyCanvasPolicy implements CanvasPolicy, CustomPolicy {
 mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
   // variable used to calculate delta offset to move the component.
   late Offset lastFocalPoint;
+
+  @override
+  void onComponentEnter(String componentId) {
+    hoverHighlight(componentId);
+  }
+
+  @override
+  void onComponentExit(String componentId) {
+    hoverHighlightOff(componentId);
+  }
 
   @override
   void onComponentTap(String componentId) {
@@ -164,7 +174,7 @@ mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
   }
 
   @override
-  void onComponentScaleStart(componentId, details) {
+  void onComponentScaleStart(String componentId, ScaleStartDetails details, {bool forceMove = false}) {
     lastFocalPoint = details.localFocalPoint;
   }
 
@@ -224,6 +234,16 @@ mixin CustomPolicy implements PolicySet {
       canvasReader.model.getComponent(componentId).refresh();
       selectedComponentId = null;
     }
+  }
+
+  void hoverHighlight(String componentId) {
+    canvasReader.model.getComponent(componentId).data.showHoverHighlight();
+    canvasReader.model.getComponent(componentId).refresh();
+  }
+
+  void hoverHighlightOff(String componentId) {
+    canvasReader.model.getComponent(componentId).data.hideHoverHighlight();
+    canvasReader.model.getComponent(componentId).refresh();
   }
 
   void deleteAllComponents() {

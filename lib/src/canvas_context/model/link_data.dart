@@ -2,7 +2,7 @@ import 'package:flexi_editor/src/utils/link_style.dart';
 import 'package:flexi_editor/src/utils/vector_utils.dart';
 import 'package:flutter/material.dart';
 
-class LinkData with ChangeNotifier {
+class LinkData<T> with ChangeNotifier {
   final String id;
 
   final String sourceComponentId;
@@ -15,7 +15,7 @@ class LinkData with ChangeNotifier {
 
   bool areJointsVisible = false;
 
-  dynamic data;
+  T? data;
 
   LinkData({
     required this.id,
@@ -120,9 +120,7 @@ class LinkData with ChangeNotifier {
         sourceComponentId = json['source_component_id'],
         targetComponentId = json['target_component_id'],
         linkStyle = LinkStyle.fromJson(json['link_style']),
-        linkPoints = (json['link_points'] as List)
-            .map((point) => Offset(point[0], point[1]))
-            .toList(),
+        linkPoints = (json['link_points'] as List).map((point) => Offset(point[0], point[1])).toList(),
         data = decodeCustomLinkData?.call(json['dynamic_data']);
 
   Map<String, dynamic> toJson() => {
@@ -131,6 +129,6 @@ class LinkData with ChangeNotifier {
         'target_component_id': targetComponentId,
         'link_style': linkStyle,
         'link_points': linkPoints.map((point) => [point.dx, point.dy]).toList(),
-        'dynamic_data': data?.toJson(),
+        'dynamic_data': (data as dynamic).toJson(),
       };
 }

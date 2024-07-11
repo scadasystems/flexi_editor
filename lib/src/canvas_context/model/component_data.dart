@@ -7,8 +7,8 @@ class ComponentData<T> with ChangeNotifier {
   final String id;
   Offset position;
   Size size;
-  final Size minSize;
-  final String? type;
+  final String type;
+  String? subtype;
   int zOrder = 0;
   String? parentId;
   final List<String> childrenIds = [];
@@ -18,12 +18,11 @@ class ComponentData<T> with ChangeNotifier {
   ComponentData({
     String? id,
     this.position = Offset.zero,
-    this.size = const Size(80, 80),
-    this.minSize = const Size(4, 4),
-    this.type,
+    this.size = const Size(100, 100),
+    required this.type,
+    this.subtype,
     this.data,
-  })  : assert(minSize <= size),
-        id = id ?? const Uuid().v4();
+  }) : id = id ?? const Uuid().v4();
 
   void refresh() {
     notifyListeners();
@@ -48,14 +47,7 @@ class ComponentData<T> with ChangeNotifier {
   }
 
   void resizeDelta(Offset deltaSize) {
-    var tempSize = size + deltaSize;
-    if (tempSize.width < minSize.width) {
-      tempSize = Size(minSize.width, tempSize.height);
-    }
-    if (tempSize.height < minSize.height) {
-      tempSize = Size(tempSize.width, minSize.height);
-    }
-    size = tempSize;
+    size = size + deltaSize;
     notifyListeners();
   }
 
@@ -87,14 +79,18 @@ class ComponentData<T> with ChangeNotifier {
     childrenIds.remove(childId);
   }
 
+  void setSubtype(String subtype) {
+    this.subtype = subtype;
+  }
+
   ComponentData.fromJson(
     Map<String, dynamic> json, {
     Function(Map<String, dynamic> json)? decodeCustomComponentData,
   })  : id = json['id'],
         position = Offset(json['position'][0], json['position'][1]),
         size = Size(json['size'][0], json['size'][1]),
-        minSize = Size(json['min_size'][0], json['min_size'][1]),
         type = json['type'],
+        subtype = json['subtype'],
         zOrder = json['z_order'],
         parentId = json['parent_id'],
         data = decodeCustomComponentData?.call(json['dynamic_data']) {
@@ -112,17 +108,12 @@ class ComponentData<T> with ChangeNotifier {
         'id': id,
         'position': [position.dx, position.dy],
         'size': [size.width, size.height],
-        'min_size': [minSize.width, minSize.height],
         'type': type,
+        'subtype': subtype,
         'z_order': zOrder,
         'parent_id': parentId,
         'children_ids': childrenIds,
         'connections': connections,
         'dynamic_data': (data as dynamic)?.toJson(),
       };
-
-  @override
-  String toString() {
-    return 'ComponentData(id: $id, position: $position, size: $size, minSize: $minSize, type: $type, zOrder: $zOrder, parentId: $parentId, childrenIds: $childrenIds)';
-  }
 }

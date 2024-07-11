@@ -18,9 +18,11 @@ class RectComponent extends StatelessWidget {
         color: (componentData.data as MyComponentData).color,
         border: Border.all(
           width: 2,
-          color: (componentData.data as MyComponentData).isHighlightVisible //
-              ? Colors.pink
-              : Colors.black,
+          color: (componentData.data as MyComponentData).isHoverHighlight
+              ? Colors.blue
+              : (componentData.data as MyComponentData).isHighlightVisible //
+                  ? Colors.pink
+                  : Colors.black,
         ),
       ),
       child: const Center(
