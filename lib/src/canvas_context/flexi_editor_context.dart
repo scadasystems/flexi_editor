@@ -16,9 +16,8 @@ class FlexiEditorContext {
   CanvasState get canvasState => _canvasState;
   CanvasEvent get canvasEvent => _canvasEvent;
 
-  FlexiEditorContext({
-    required this.policySet,
-  })  : _canvasModel = CanvasModel(policySet),
+  FlexiEditorContext(this.policySet)
+      : _canvasModel = CanvasModel(policySet),
         _canvasEvent = CanvasEvent(),
         _canvasState = CanvasState() {
     policySet.initializePolicy(_getReader(), _getWriter(), _canvasEvent);

@@ -2,7 +2,6 @@
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
-import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
@@ -280,19 +279,22 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     return MouseRegion(
       onEnter: (event) => context.read<CanvasEvent>().requestFocus(),
       onExit: (event) => context.read<CanvasEvent>().unfocus(),
-      child: Focus(
-        focusNode: context.read<CanvasEvent>().keyboardFocusNode,
-        onKeyEvent: context.read<CanvasEvent>().onKeyboardEvent,
-        child: AbsorbPointer(
-          absorbing: context.read<CanvasState>().shouldAbsorbPointer,
-          child: Listener(
-            onPointerSignal: widget.policy.onCanvasPointerSignal,
-            child: Stack(
-              children: [
-                _buildGestureDetector(context),
-                _buildSelectionBox(context),
-                _buildGrabbingArea(context),
-              ],
+      child: RepaintBoundary(
+        key: context.read<CanvasState>().canvasGlobalKey,
+        child: Focus(
+          focusNode: context.read<CanvasEvent>().keyboardFocusNode,
+          onKeyEvent: context.read<CanvasEvent>().onKeyboardEvent,
+          child: AbsorbPointer(
+            absorbing: context.read<CanvasState>().shouldAbsorbPointer,
+            child: Listener(
+              onPointerSignal: widget.policy.onCanvasPointerSignal,
+              child: Stack(
+                children: [
+                  _buildGestureDetector(context),
+                  _buildSelectionBox(context),
+                  _buildGrabbingArea(context),
+                ],
+              ),
             ),
           ),
         ),
