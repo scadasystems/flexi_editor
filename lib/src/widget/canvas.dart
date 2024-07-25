@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 typedef SelectionRectChangedCallback = Function(Rect selectionRect);
-typedef KeyboardEventCallback = Function(KeyEvent keyEvent);
+typedef KeyboardEventCallback = Function(FocusNode node, KeyEvent keyEvent);
 
 class FlexiEditorCanvas extends StatefulWidget {
   final PolicySet policy;
@@ -34,13 +34,11 @@ class FlexiEditorCanvas extends StatefulWidget {
 }
 
 class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
-  PolicySet? withControlPolicy;
+  late PolicySet withControlPolicy;
 
   @override
   void initState() {
-    withControlPolicy = (widget.policy is CanvasControlPolicy) || (widget.policy is CanvasMovePolicy) //
-        ? widget.policy
-        : null;
+    withControlPolicy = widget.policy;
 
     (withControlPolicy as CanvasControlPolicy?)?.setAnimationController(
       AnimationController(
@@ -122,29 +120,48 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     return widget.policy.showCustomWidgetsOnCanvasForeground(context);
   }
 
-  Widget canvasStack(CanvasModel canvasModel) {
+  Widget canvasStack() {
+    // return Stack(
+    //   clipBehavior: Clip.none,
+    //   fit: StackFit.expand,
+    //   children: [
+    //     ...showBackgroundWidgets(),
+    //     ...showOtherWithComponentDataUnder(canvasModel),
+    //     if (widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
+    //     ...showLinks(canvasModel),
+    //     if (!widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
+    //     ...showOtherWithComponentDataOver(canvasModel),
+    //     ...showForegroundWidgets(),
+    //   ],
+    // );
+
     return Stack(
       clipBehavior: Clip.none,
       fit: StackFit.expand,
       children: [
-        ...showBackgroundWidgets(),
-        ...showOtherWithComponentDataUnder(canvasModel),
-        if (widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
-        ...showLinks(canvasModel),
-        if (!widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
-        ...showOtherWithComponentDataOver(canvasModel),
-        ...showForegroundWidgets(),
+        Consumer2<CanvasState, CanvasModel>(
+          builder: (context, state, model, child) {
+            return Stack(
+              children: [
+                ...showComponents(model),
+                ...showLinks(model),
+                ...showOtherWithComponentDataOver(model),
+                ...showForegroundWidgets(),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget canvasAnimated(CanvasModel canvasModel) {
+  Widget canvasAnimated() {
     final animationController = (withControlPolicy as CanvasControlPolicy).getAnimationController();
-    if (animationController == null) return canvasStack(canvasModel);
+    if (animationController == null) return canvasStack();
 
     return AnimatedBuilder(
       animation: animationController,
-      builder: (BuildContext context, Widget? child) {
+      builder: (context, child) {
         (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
         return Transform(
           transform: Matrix4.identity()
@@ -156,59 +173,54 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
           child: child,
         );
       },
-      child: canvasStack(canvasModel),
+      child: canvasStack(),
     );
   }
 
   /// 캔버스
-  Widget _buildGestureDetector(BuildContext context) {
-    return Consumer3<CanvasModel, CanvasState, CanvasEvent>(
-      builder: (context, canvaseModel, canvasState, canvasEvent, child) {
-        return GestureDetector(
-          onScaleStart: (details) {
-            widget.onSelectionRectStart?.call();
+  Widget _buildCanvas(BuildContext context) {
+    final canvasEvent = context.read<CanvasEvent>();
+    final canvasState = context.read<CanvasState>();
 
-            if (canvasEvent.isStartDragSelection) {
-              canvasEvent.startSelectDragPosition(details);
-            } else {
-              widget.policy.onCanvasScaleStartEvent(details);
-            }
-          },
-          onScaleUpdate: (details) {
-            if (canvasEvent.isStartDragSelection) {
-              canvasEvent.updateSelectDragPosition(details);
-            } else {
-              widget.policy.onCanvasScaleUpdateEvent(details);
-            }
-          },
-          onScaleEnd: (details) {
-            widget.onSelectionRectEnd?.call();
+    return GestureDetector(
+      onScaleStart: (details) {
+        widget.onSelectionRectStart?.call();
 
-            if (canvasEvent.isStartDragSelection) {
-              canvasEvent.endSelectDragPosition();
-            } else {
-              widget.policy.onCanvasScaleEndEvent(details);
-            }
-          },
-          onTap: widget.policy.onCanvasTap,
-          onTapDown: widget.policy.onCanvasTapDown,
-          onTapUp: widget.policy.onCanvasTapUp,
-          onTapCancel: widget.policy.onCanvasTapCancel,
-          onLongPress: widget.policy.onCanvasLongPress,
-          onLongPressStart: widget.policy.onCanvasLongPressStart,
-          onLongPressMoveUpdate: widget.policy.onCanvasLongPressMoveUpdate,
-          onLongPressEnd: widget.policy.onCanvasLongPressEnd,
-          onLongPressUp: widget.policy.onCanvasLongPressUp,
-          child: Container(
-            color: canvasState.color,
-            child: ClipRect(
-              child: (withControlPolicy != null)
-                  ? canvasAnimated(context.read<CanvasModel>())
-                  : canvasStack(context.read<CanvasModel>()),
-            ),
-          ),
-        );
+        if (canvasEvent.isStartDragSelection) {
+          canvasEvent.startSelectDragPosition(details);
+        } else {
+          widget.policy.onCanvasScaleStartEvent(details);
+        }
       },
+      onScaleUpdate: (details) {
+        if (canvasEvent.isStartDragSelection) {
+          canvasEvent.updateSelectDragPosition(details);
+        } else {
+          widget.policy.onCanvasScaleUpdateEvent(details);
+        }
+      },
+      onScaleEnd: (details) {
+        widget.onSelectionRectEnd?.call();
+
+        if (canvasEvent.isStartDragSelection) {
+          canvasEvent.endSelectDragPosition();
+        } else {
+          widget.policy.onCanvasScaleEndEvent(details);
+        }
+      },
+      onTap: widget.policy.onCanvasTap,
+      onTapDown: widget.policy.onCanvasTapDown,
+      onTapUp: widget.policy.onCanvasTapUp,
+      onTapCancel: widget.policy.onCanvasTapCancel,
+      onLongPress: widget.policy.onCanvasLongPress,
+      onLongPressStart: widget.policy.onCanvasLongPressStart,
+      onLongPressMoveUpdate: widget.policy.onCanvasLongPressMoveUpdate,
+      onLongPressEnd: widget.policy.onCanvasLongPressEnd,
+      onLongPressUp: widget.policy.onCanvasLongPressUp,
+      child: Container(
+        color: canvasState.color,
+        child: canvasAnimated(),
+      ),
     );
   }
 
@@ -276,21 +288,29 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   @override
   Widget build(BuildContext context) {
+    final canvasEvent = context.read<CanvasEvent>();
+    final canvasState = context.read<CanvasState>();
+
     return MouseRegion(
-      onEnter: (event) => context.read<CanvasEvent>().requestFocus(),
-      onExit: (event) => context.read<CanvasEvent>().unfocus(),
+      onEnter: (event) => canvasEvent.requestFocus(),
+      onExit: (event) => canvasEvent.unfocus(),
       child: RepaintBoundary(
-        key: context.read<CanvasState>().canvasGlobalKey,
+        key: canvasState.canvasGlobalKey,
         child: Focus(
-          focusNode: context.read<CanvasEvent>().keyboardFocusNode,
-          onKeyEvent: context.read<CanvasEvent>().onKeyboardEvent,
+          focusNode: canvasEvent.keyboardFocusNode,
+          onKeyEvent: (node, event) {
+            widget.onKeyboardEvent?.call(node, event);
+
+            return canvasEvent.onKeyboardEvent(node, event);
+          },
           child: AbsorbPointer(
-            absorbing: context.read<CanvasState>().shouldAbsorbPointer,
+            absorbing: canvasState.shouldAbsorbPointer,
             child: Listener(
               onPointerSignal: widget.policy.onCanvasPointerSignal,
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  _buildGestureDetector(context),
+                  _buildCanvas(context),
                   _buildSelectionBox(context),
                   _buildGrabbingArea(context),
                 ],

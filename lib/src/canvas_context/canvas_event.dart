@@ -81,8 +81,7 @@ class CanvasEvent with ChangeNotifier {
 
   /// 키보드 이벤트
   KeyEventResult onKeyboardEvent(FocusNode node, KeyEvent event) {
-    final isControlPressed = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
-
+    //#region 스페이스바 이벤트
     if (event.logicalKey == LogicalKeyboardKey.space) {
       if (event is KeyDownEvent) {
         setSpacePressed(true);
@@ -92,12 +91,7 @@ class CanvasEvent with ChangeNotifier {
 
       return KeyEventResult.handled;
     }
-
-    if (isControlPressed && HardwareKeyboard.instance.isLogicalKeyPressed(event.logicalKey)) {
-      if (event is KeyDownEvent) {
-        print('Control + ${event.logicalKey.keyLabel}');
-      }
-    }
+    //#endregion
 
     return KeyEventResult.ignored;
   }

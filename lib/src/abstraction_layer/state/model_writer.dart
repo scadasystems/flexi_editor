@@ -89,15 +89,15 @@ mixin ComponentWriter on ModelWriter {
     _canvasModel.updateLinks(componentId);
   }
 
-  void moveComponent(String componentId, Offset offset) {
+  void moveComponent(String componentId, Offset offset, {bool withScale = true}) {
     assert(_canvasModel.componentExists(componentId), 'model does not contain this component id: $componentId');
-    _canvasModel.getComponent(componentId).move(offset / _canvasState.scale);
+    _canvasModel.getComponent(componentId).move(offset / (withScale ? _canvasState.scale : 1));
     _canvasModel.updateLinks(componentId);
   }
 
-  void moveComponentWithChildren(String componentId, Offset offset) {
+  void moveComponentWithChildren(String componentId, Offset offset, {bool withScale = true}) {
     assert(_canvasModel.componentExists(componentId), 'model does not contain this component id: $componentId');
-    moveComponent(componentId, offset);
+    moveComponent(componentId, offset, withScale: withScale);
     _canvasModel.getComponent(componentId).childrenIds.forEach((childId) {
       moveComponentWithChildren(childId, offset);
     });

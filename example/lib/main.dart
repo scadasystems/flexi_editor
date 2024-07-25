@@ -27,7 +27,7 @@ class DiagramAppState extends State<DiagramApp> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: FlexiEditor(
-                  flexiEditorContext: FlexiEditorContext(policySet: myPolicySet),
+                  flexiEditorContext: FlexiEditorContext(myPolicySet),
                 ),
               ),
               Padding(
