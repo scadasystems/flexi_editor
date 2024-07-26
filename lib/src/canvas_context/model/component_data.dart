@@ -63,12 +63,16 @@ class ComponentData<T> with ChangeNotifier {
     );
   }
 
-  void setParent(String parentId) {
+  void setParent(String? parentId) {
     this.parentId = parentId;
   }
 
   void removeParent() {
     parentId = null;
+  }
+
+  void setZOrder(int zOrder) {
+    this.zOrder = zOrder;
   }
 
   void addChild(String childId) {
@@ -116,4 +120,29 @@ class ComponentData<T> with ChangeNotifier {
         'connections': connections,
         'dynamic_data': (data as dynamic)?.toJson(),
       };
+
+  ComponentData<T> copyWith({
+    String? id,
+    Offset? position,
+    Size? size,
+    String? type,
+    String? subtype,
+    String? parentId,
+    int? zOrder,
+    T? data,
+  }) {
+    final component = ComponentData<T>(
+      id: id ?? this.id,
+      position: position ?? this.position,
+      size: size ?? this.size,
+      type: type ?? this.type,
+      subtype: subtype ?? this.subtype,
+      data: data ?? this.data,
+    );
+
+    component.setZOrder(zOrder ?? this.zOrder);
+    component.setParent(parentId ?? this.parentId);
+
+    return component;
+  }
 }

@@ -2,6 +2,7 @@
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
+import 'package:flexi_editor/src/extensions/context_extension.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
@@ -186,14 +187,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       onScaleStart: (details) {
         widget.onSelectionRectStart?.call();
 
-        if (canvasEvent.isStartDragSelection) {
+        if (!context.isTouchDevice && canvasEvent.isStartDragSelection) {
           canvasEvent.startSelectDragPosition(details);
         } else {
           widget.policy.onCanvasScaleStartEvent(details);
         }
       },
       onScaleUpdate: (details) {
-        if (canvasEvent.isStartDragSelection) {
+        if (!context.isTouchDevice && canvasEvent.isStartDragSelection) {
           canvasEvent.updateSelectDragPosition(details);
         } else {
           widget.policy.onCanvasScaleUpdateEvent(details);
@@ -202,7 +203,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       onScaleEnd: (details) {
         widget.onSelectionRectEnd?.call();
 
-        if (canvasEvent.isStartDragSelection) {
+        if (!context.isTouchDevice && canvasEvent.isStartDragSelection) {
           canvasEvent.endSelectDragPosition();
         } else {
           widget.policy.onCanvasScaleEndEvent(details);
@@ -217,9 +218,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       onLongPressMoveUpdate: widget.policy.onCanvasLongPressMoveUpdate,
       onLongPressEnd: widget.policy.onCanvasLongPressEnd,
       onLongPressUp: widget.policy.onCanvasLongPressUp,
-      child: Container(
-        color: canvasState.color,
-        child: canvasAnimated(),
+      child: ClipRect(
+        child: Container(
+          color: canvasState.color,
+          child: canvasAnimated(),
+        ),
       ),
     );
   }
@@ -264,20 +267,18 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     return Consumer<CanvasEvent>(
       builder: (context, canvasEvent, child) {
         if (canvasEvent.isSpacePressed) {
-          return Positioned.fill(
-            child: MouseRegion(
-              cursor: canvasEvent.mouseCursor,
-              child: GestureDetector(
-                onScaleStart: (details) {
-                  canvasEvent.setMouseGrabCursor(true);
-                  widget.policy.onCanvasScaleStart(details);
-                },
-                onScaleUpdate: widget.policy.onCanvasScaleUpdate,
-                onScaleEnd: (details) {
-                  canvasEvent.setMouseGrabCursor(false);
-                  widget.policy.onCanvasScaleEnd(details);
-                },
-              ),
+          return MouseRegion(
+            cursor: canvasEvent.mouseCursor,
+            child: GestureDetector(
+              onScaleStart: (details) {
+                canvasEvent.setMouseGrabCursor(true);
+                widget.policy.onCanvasScaleStart(details);
+              },
+              onScaleUpdate: widget.policy.onCanvasScaleUpdate,
+              onScaleEnd: (details) {
+                canvasEvent.setMouseGrabCursor(false);
+                widget.policy.onCanvasScaleEnd(details);
+              },
             ),
           );
         }
@@ -291,11 +292,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     final canvasEvent = context.read<CanvasEvent>();
     final canvasState = context.read<CanvasState>();
 
-    return MouseRegion(
-      onEnter: (event) => canvasEvent.requestFocus(),
-      onExit: (event) => canvasEvent.unfocus(),
-      child: RepaintBoundary(
-        key: canvasState.canvasGlobalKey,
+    return RepaintBoundary(
+      key: canvasState.canvasGlobalKey,
+      child: MouseRegion(
+        onEnter: (event) => canvasEvent.requestFocus(),
+        onExit: (event) => canvasEvent.unfocus(),
         child: Focus(
           focusNode: canvasEvent.keyboardFocusNode,
           onKeyEvent: (node, event) {
@@ -308,7 +309,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
             child: Listener(
               onPointerSignal: widget.policy.onCanvasPointerSignal,
               child: Stack(
-                clipBehavior: Clip.none,
                 children: [
                   _buildCanvas(context),
                   _buildSelectionBox(context),
