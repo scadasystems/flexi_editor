@@ -14,10 +14,40 @@ class CanvasModel with ChangeNotifier {
   CanvasModel(this.policySet);
 
   FlexiData getFlexi() {
+    for (var component in components.values) {
+      if (!_hasToJsonMethodAtComponent(component)) {
+        throw ArgumentError('ComponentData.data does not have a toJson() method.');
+      }
+    }
+
+    for (var link in links.values) {
+      if (!_hasToJsonMethodAtLink(link)) {
+        throw ArgumentError('LinkData.data does not have a toJson() method.');
+      }
+    }
+
     return FlexiData(
       components: components.values.toList(),
       links: links.values.toList(),
     );
+  }
+
+  bool _hasToJsonMethodAtComponent(ComponentData component) {
+    try {
+      component.data.toJson();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool _hasToJsonMethodAtLink(LinkData link) {
+    try {
+      link.data.toJson();
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   void updateCanvas() {

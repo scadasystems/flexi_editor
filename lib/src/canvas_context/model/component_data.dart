@@ -97,7 +97,7 @@ class ComponentData<T> with ChangeNotifier {
         subtype = json['subtype'],
         zOrder = json['z_order'],
         parentId = json['parent_id'],
-        data = decodeCustomComponentData?.call(json['dynamic_data']) {
+        data = decodeCustomComponentData?.call(json['dynamic_data'] ?? {}) {
     childrenIds.addAll(
       (json['children_ids'] as List).map((id) => id as String).toList(),
     );
@@ -113,12 +113,12 @@ class ComponentData<T> with ChangeNotifier {
         'position': [position.dx, position.dy],
         'size': [size.width, size.height],
         'type': type,
-        'subtype': subtype,
+        if (subtype != null) 'subtype': subtype,
         'z_order': zOrder,
-        'parent_id': parentId,
-        'children_ids': childrenIds,
-        'connections': connections,
-        'dynamic_data': (data as dynamic)?.toJson(),
+        if (parentId != null) 'parent_id': parentId,
+        if (childrenIds.isNotEmpty) 'children_ids': childrenIds,
+        if (connections.isNotEmpty) 'connections': connections,
+        if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
       };
 
   ComponentData<T> copyWith({
