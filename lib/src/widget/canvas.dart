@@ -164,14 +164,15 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       animation: animationController,
       builder: (context, child) {
         (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
-        return Transform(
-          transform: Matrix4.identity()
-            ..translate(
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
-            )
-            ..scale((withControlPolicy as CanvasControlPolicy).transformScale),
-          child: child,
+        return Transform.translate(
+          offset: Offset(
+            (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
+            (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
+          ),
+          child: Transform.scale(
+            scale: (withControlPolicy as CanvasControlPolicy).transformScale,
+            child: child,
+          ),
         );
       },
       child: canvasStack(),
