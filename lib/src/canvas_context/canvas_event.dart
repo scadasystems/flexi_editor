@@ -37,6 +37,11 @@ class CanvasEvent with ChangeNotifier {
   /// 스페이스바 눌림 상태 변경
   void setSpacePressed(bool value) {
     _isSpacePressed = value;
+
+    if (!value) {
+      setMouseGrabCursor(false);
+    }
+
     notifyListeners();
   }
 

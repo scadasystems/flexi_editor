@@ -264,6 +264,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
   }
 
   /// 스페이스 누를 때 마우스 커서
+  bool _isDragging = false;
+
   Widget _buildGrabbingArea(BuildContext context) {
     return Consumer<CanvasEvent>(
       builder: (context, canvasEvent, child) {
@@ -271,15 +273,25 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
           return MouseRegion(
             cursor: canvasEvent.mouseCursor,
             child: GestureDetector(
-              onScaleStart: (details) {
+              onPanStart: (details) {
                 canvasEvent.setMouseGrabCursor(true);
-                widget.policy.onCanvasScaleStart(details);
+                _isDragging = true;
+                widget.policy.onCanvasScaleStart(ScaleStartDetails(
+                  focalPoint: details.localPosition,
+                  pointerCount: 1,
+                ));
               },
-              onScaleUpdate: widget.policy.onCanvasScaleUpdate,
-              onScaleEnd: (details) {
-                canvasEvent.setMouseGrabCursor(false);
-                widget.policy.onCanvasScaleEnd(details);
+              onPanUpdate: (details) {
+                if (_isDragging) {
+                  widget.policy.onCanvasScaleUpdate(ScaleUpdateDetails(
+                    focalPoint: details.localPosition,
+                    focalPointDelta: details.delta,
+                    scale: 1.0,
+                  ));
+                }
               },
+              onPanEnd: (details) => _endDrag(),
+              onPanCancel: () => _endDrag(),
             ),
           );
         }
@@ -288,23 +300,30 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     );
   }
 
+  void _endDrag() {
+    if (_isDragging) {
+      _isDragging = false;
+      widget.policy.onCanvasScaleEnd(ScaleEndDetails());
+      context.read<CanvasEvent>().setMouseGrabCursor(false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final canvasEvent = context.read<CanvasEvent>();
     final canvasState = context.read<CanvasState>();
 
-    return RepaintBoundary(
-      key: canvasState.canvasGlobalKey,
-      child: MouseRegion(
-        onEnter: (event) => canvasEvent.requestFocus(),
-        onExit: (event) => canvasEvent.unfocus(),
-        child: Focus(
-          focusNode: canvasEvent.keyboardFocusNode,
-          onKeyEvent: (node, event) {
-            widget.onKeyboardEvent?.call(node, event);
-
-            return canvasEvent.onKeyboardEvent(node, event);
-          },
+    return Focus(
+      focusNode: canvasEvent.keyboardFocusNode,
+      onKeyEvent: (node, event) {
+        widget.onKeyboardEvent?.call(node, event);
+        return canvasEvent.onKeyboardEvent(node, event);
+      },
+      child: RepaintBoundary(
+        key: canvasState.canvasGlobalKey,
+        child: MouseRegion(
+          onEnter: (event) => canvasEvent.requestFocus(),
+          onExit: (event) => canvasEvent.unfocus(),
           child: AbsorbPointer(
             absorbing: canvasState.shouldAbsorbPointer,
             child: Listener(

@@ -87,9 +87,7 @@ mixin CanvasControlPolicy on BasePolicySet {
 
     scaleChange = keepScaleInBounds(scaleChange, canvasReader.state.scale);
 
-    if (scaleChange == 0.0) {
-      return;
-    }
+    if (scaleChange == 0.0) return;
 
     double previousScale = canvasReader.state.scale;
 
