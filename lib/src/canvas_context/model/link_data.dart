@@ -120,7 +120,7 @@ class LinkData<T> with ChangeNotifier {
         sourceComponentId = json['source_component_id'],
         targetComponentId = json['target_component_id'],
         linkStyle = LinkStyle.fromJson(json['link_style']),
-        linkPoints = (json['link_points'] as List).map((point) => Offset(point[0], point[1])).toList(),
+        linkPoints = (json['link_points'] as List).map((point) => Offset(point['x'], point['y'])).toList(),
         data = decodeCustomLinkData?.call(json['dynamic_data'] ?? {});
 
   Map<String, dynamic> toJson() => {
@@ -128,7 +128,7 @@ class LinkData<T> with ChangeNotifier {
         'source_component_id': sourceComponentId,
         'target_component_id': targetComponentId,
         'link_style': linkStyle,
-        'link_points': linkPoints.map((point) => [point.dx, point.dy]).toList(),
+        'link_points': linkPoints.map((point) => {'x': point.dx.round(), 'y': point.dy.round()}).toList(),
         // if (data != null) 'dynamic_data': (data as dynamic).toJson(),
       };
 }
