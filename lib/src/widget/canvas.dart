@@ -7,6 +7,7 @@ import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 typedef SelectionRectChangedCallback = Function(Rect selectionRect);
@@ -122,37 +123,19 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
   }
 
   Widget canvasStack() {
-    // return Stack(
-    //   clipBehavior: Clip.none,
-    //   fit: StackFit.expand,
-    //   children: [
-    //     ...showBackgroundWidgets(),
-    //     ...showOtherWithComponentDataUnder(canvasModel),
-    //     if (widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
-    //     ...showLinks(canvasModel),
-    //     if (!widget.policy.showLinksOnTopOfComponents) ...showComponents(canvasModel),
-    //     ...showOtherWithComponentDataOver(canvasModel),
-    //     ...showForegroundWidgets(),
-    //   ],
-    // );
-
-    return Stack(
-      clipBehavior: Clip.none,
-      fit: StackFit.expand,
-      children: [
-        Consumer2<CanvasState, CanvasModel>(
-          builder: (context, state, model, child) {
-            return Stack(
-              children: [
-                ...showComponents(model),
-                ...showLinks(model),
-                ...showOtherWithComponentDataOver(model),
-                ...showForegroundWidgets(),
-              ],
-            );
-          },
-        ),
-      ],
+    return Consumer2<CanvasState, CanvasModel>(
+      builder: (context, state, model, child) {
+        return Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.expand,
+          children: [
+            ...showComponents(model),
+            ...showLinks(model),
+            ...showOtherWithComponentDataOver(model),
+            ...showForegroundWidgets(),
+          ],
+        );
+      },
     );
   }
 
@@ -164,15 +147,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       animation: animationController,
       builder: (context, child) {
         (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
-        return Transform.translate(
-          offset: Offset(
-            (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
-            (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
-          ),
-          child: Transform.scale(
-            scale: (withControlPolicy as CanvasControlPolicy).transformScale,
-            child: child,
-          ),
+        return Transform(
+          transform: Matrix4.identity()
+            ..translate(
+              (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
+              (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
+            )
+            ..scale((withControlPolicy as CanvasControlPolicy).transformScale),
+          child: child,
         );
       },
       child: canvasStack(),
@@ -265,7 +247,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   /// 스페이스 누를 때 마우스 커서
   bool _isDragging = false;
-
   Widget _buildGrabbingArea(BuildContext context) {
     return Consumer<CanvasEvent>(
       builder: (context, canvasEvent, child) {
@@ -317,7 +298,21 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       focusNode: canvasEvent.keyboardFocusNode,
       onKeyEvent: (node, event) {
         widget.onKeyboardEvent?.call(node, event);
-        return canvasEvent.onKeyboardEvent(node, event);
+
+        //#region 스페이스바 이벤트
+        if (event.logicalKey == LogicalKeyboardKey.space) {
+          if (event is KeyDownEvent) {
+            canvasEvent.setSpacePressed(true);
+          } else if (event is KeyUpEvent) {
+            canvasEvent.setSpacePressed(false);
+            _endDrag();
+          }
+
+          return KeyEventResult.handled;
+        }
+        //#endregion
+
+        return KeyEventResult.ignored;
       },
       child: RepaintBoundary(
         key: canvasState.canvasGlobalKey,

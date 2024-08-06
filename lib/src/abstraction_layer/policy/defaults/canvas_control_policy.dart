@@ -36,22 +36,26 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void onCanvasScaleUpdate(ScaleUpdateDetails details) {
-    if (canUpdateCanvasModel) {
+    if (!canUpdateCanvasModel) return;
+
+    if (_animationController?.isAnimating == false) {
       _animationController?.repeat();
-      _updateCanvasModelWithLastValues();
+    }
 
-      double previousScale = transformScale;
+    double previousScale = transformScale;
 
-      transformPosition += details.focalPoint - _lastFocalPoint;
-      transformScale = keepScaleInBounds(details.scale, _baseScale);
+    // Position and scale transformation
+    transformPosition += details.focalPoint - _lastFocalPoint;
+    transformScale = keepScaleInBounds(details.scale, _baseScale);
 
-      var focalPoint = (details.localFocalPoint - transformPosition);
-      var focalPointScaled = focalPoint * (transformScale / previousScale);
+    var focalPoint = (details.localFocalPoint - transformPosition);
+    var focalPointScaled = focalPoint * (transformScale / previousScale);
 
-      _lastFocalPoint = details.focalPoint;
+    _lastFocalPoint = details.focalPoint;
 
-      transformPosition += focalPoint - focalPointScaled;
+    transformPosition += focalPoint - focalPointScaled;
 
+    if (_animationController?.isAnimating == true) {
       _animationController?.reset();
     }
   }
@@ -90,10 +94,11 @@ mixin CanvasControlPolicy on BasePolicySet {
     if (scaleChange == 0.0) return;
 
     double previousScale = canvasReader.state.scale;
+    Offset previousPosition = canvasReader.state.position;
 
     canvasWriter.state.updateScale(scaleChange);
 
-    var focalPoint = (event.localPosition - canvasReader.state.position);
+    var focalPoint = (event.localPosition - previousPosition);
     var focalPointScaled = focalPoint * (canvasReader.state.scale / previousScale);
 
     canvasWriter.state.updatePosition(focalPoint - focalPointScaled);

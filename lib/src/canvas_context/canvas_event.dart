@@ -83,21 +83,4 @@ class CanvasEvent with ChangeNotifier {
     _currentDragPosition = null;
     notifyListeners();
   }
-
-  /// 키보드 이벤트
-  KeyEventResult onKeyboardEvent(FocusNode node, KeyEvent event) {
-    //#region 스페이스바 이벤트
-    if (event.logicalKey == LogicalKeyboardKey.space) {
-      if (event is KeyDownEvent) {
-        setSpacePressed(true);
-      } else if (event is KeyUpEvent) {
-        setSpacePressed(false);
-      }
-
-      return KeyEventResult.handled;
-    }
-    //#endregion
-
-    return KeyEventResult.ignored;
-  }
 }
