@@ -124,7 +124,6 @@ mixin MyComponentDesignPolicy implements ComponentDesignPolicy {
 mixin MyCanvasPolicy implements CanvasPolicy, CustomPolicy {
   @override
   void onCanvasTapUp(TapUpDetails details) {
-    canvasWriter.model.hideAllLinkJoints();
     if (selectedComponentId != null) {
       hideComponentHighlight(selectedComponentId);
     } else {
@@ -157,8 +156,6 @@ mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
 
   @override
   void onComponentTap(String componentId) {
-    canvasWriter.model.hideAllLinkJoints();
-
     bool connected = connectComponents(selectedComponentId, componentId);
     hideComponentHighlight(selectedComponentId);
     if (!connected) {
@@ -169,7 +166,6 @@ mixin MyComponentPolicy implements ComponentPolicy, CustomPolicy {
   @override
   void onComponentLongPress(String componentId) {
     hideComponentHighlight(selectedComponentId);
-    canvasWriter.model.hideAllLinkJoints();
     canvasWriter.model.removeComponent(componentId);
   }
 

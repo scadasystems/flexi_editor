@@ -199,22 +199,6 @@ mixin ComponentWriter on ModelWriter {
 }
 
 mixin LinkWriter on ModelWriter {
-  void showLinkJoints(String linkId) {
-    assert(_canvasModel.linkExists(linkId), 'model does not contain this link id: $linkId');
-    _canvasModel.getLink(linkId).showJoints();
-  }
-
-  void hideLinkJoints(String linkId) {
-    assert(_canvasModel.linkExists(linkId), 'model does not contain this link id: $linkId');
-    _canvasModel.getLink(linkId).hideJoints();
-  }
-
-  void hideAllLinkJoints() {
-    for (final link in _canvasModel.links.values) {
-      link.hideJoints();
-    }
-  }
-
   void updateLink(String linkId) {
     assert(_canvasModel.linkExists(linkId), 'model does not contain this link id: $linkId');
     _canvasModel.updateLinks(_canvasModel.getLink(linkId).sourceComponentId);

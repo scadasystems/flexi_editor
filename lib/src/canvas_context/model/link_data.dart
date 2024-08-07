@@ -13,8 +13,6 @@ class LinkData<T> with ChangeNotifier {
 
   final List<Offset> linkPoints;
 
-  bool areJointsVisible = false;
-
   T? data;
 
   LinkData({
@@ -103,13 +101,9 @@ class LinkData<T> with ChangeNotifier {
     return null;
   }
 
-  void showJoints() {
-    areJointsVisible = true;
-    notifyListeners();
-  }
-
-  void hideJoints() {
-    areJointsVisible = false;
+  void setOpacity(double opacity) {
+    assert(opacity >= 0 && opacity <= 1);
+    linkStyle.color = linkStyle.color.withOpacity(opacity);
     notifyListeners();
   }
 
