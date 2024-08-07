@@ -24,9 +24,7 @@ class LinkData<T> with ChangeNotifier {
     this.data,
   }) : linkStyle = linkStyle ?? LinkStyle();
 
-  void updateLink() {
-    notifyListeners();
-  }
+  void refresh() => notifyListeners();
 
   void setStart(Offset start) {
     linkPoints[0] = start;

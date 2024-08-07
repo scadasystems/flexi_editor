@@ -70,7 +70,7 @@ class CanvasModelWriter extends ModelWriter with ComponentWriter, LinkWriter, Co
     }
     for (final linkData in flexiData.links) {
       _canvasModel.links[linkData.id] = linkData;
-      linkData.updateLink();
+      linkData.refresh();
     }
     _canvasModel.updateCanvas();
   }

@@ -24,9 +24,7 @@ class ComponentData<T> with ChangeNotifier {
     this.data,
   }) : id = id ?? const Uuid().v4();
 
-  void refresh() {
-    notifyListeners();
-  }
+  void refresh() => notifyListeners();
 
   void move(Offset offset) {
     position += offset;
