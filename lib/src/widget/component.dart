@@ -18,11 +18,16 @@ class Component extends StatelessWidget {
     final canvasState = Provider.of<CanvasState>(context);
     final canvasEvent = Provider.of<CanvasEvent>(context);
 
+    final left = canvasState.scale * component.position.dx + canvasState.position.dx;
+    final top = canvasState.scale * component.position.dy + canvasState.position.dy;
+    final width = canvasState.scale * component.size.width;
+    final height = canvasState.scale * component.size.height;
+
     return Positioned(
-      left: canvasState.scale * component.position.dx + canvasState.position.dx,
-      top: canvasState.scale * component.position.dy + canvasState.position.dy,
-      width: canvasState.scale * component.size.width,
-      height: canvasState.scale * component.size.height,
+      left: left,
+      top: top,
+      width: width,
+      height: height,
       child: Listener(
         onPointerSignal: (PointerSignalEvent event) {
           policy.onComponentPointerSignal(component.id, event);
