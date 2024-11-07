@@ -108,8 +108,8 @@ class ComponentData<T> with ChangeNotifier {
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'position': [position.dx, position.dy],
-        'size': [size.width, size.height],
+        'position': [position.dx.round(), position.dy.round()],
+        'size': [size.width.round(), size.height.round()],
         'type': type,
         if (subtype != null) 'subtype': subtype,
         'z_order': zOrder,
