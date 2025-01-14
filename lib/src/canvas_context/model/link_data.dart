@@ -4,13 +4,9 @@ import 'package:flutter/material.dart';
 
 class LinkData<T> with ChangeNotifier {
   final String id;
-
   final String sourceComponentId;
-
   final String targetComponentId;
-
   final LinkStyle linkStyle;
-
   final List<Offset> linkPoints;
 
   T? data;
@@ -121,6 +117,6 @@ class LinkData<T> with ChangeNotifier {
         'target_component_id': targetComponentId,
         'link_style': linkStyle,
         'link_points': linkPoints.map((point) => {'x': point.dx.round(), 'y': point.dy.round()}).toList(),
-        // if (data != null) 'dynamic_data': (data as dynamic).toJson(),
+        if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
       };
 }
