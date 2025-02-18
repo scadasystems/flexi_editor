@@ -15,60 +15,13 @@ class LinkPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    var paint = Paint()
+    final paint = Paint()
       ..color = linkStyle.color
       ..strokeWidth = linkStyle.lineWidth * scale
       ..style = PaintingStyle.stroke;
 
     for (int i = 0; i < linkPoints.length - 1; i++) {
-      if (linkPoints.length == 2) {
-        canvas.drawPath(
-          linkStyle.getLinePath(
-            VectorUtils.getShorterLineStart(
-              linkPoints[i],
-              linkPoints[i + 1],
-              scale * linkStyle.getEndShortening(linkStyle.backArrowType),
-            ),
-            VectorUtils.getShorterLineEnd(
-              linkPoints[i],
-              linkPoints[i + 1],
-              scale * linkStyle.getEndShortening(linkStyle.arrowType),
-            ),
-            scale,
-          ),
-          paint,
-        );
-      } else if (i == 0) {
-        canvas.drawPath(
-          linkStyle.getLinePath(
-            VectorUtils.getShorterLineStart(
-              linkPoints[i],
-              linkPoints[i + 1],
-              scale * linkStyle.getEndShortening(linkStyle.backArrowType),
-            ),
-            linkPoints[i + 1],
-            scale,
-          ),
-          paint,
-        );
-      } else if (i == linkPoints.length - 2) {
-        canvas.drawPath(
-          linkStyle.getLinePath(
-            linkPoints[i],
-            VectorUtils.getShorterLineEnd(
-              linkPoints[i],
-              linkPoints[i + 1],
-              scale * linkStyle.getEndShortening(linkStyle.arrowType),
-            ),
-            scale,
-          ),
-          paint,
-        );
-      } else {
-        canvas.drawPath(
-            linkStyle.getLinePath(linkPoints[i], linkPoints[i + 1], scale),
-            paint);
-      }
+      drawLineSegment(canvas, i, paint);
     }
 
     paint.style = PaintingStyle.fill;
@@ -110,6 +63,57 @@ class LinkPainter extends CustomPainter {
   bool hitTest(Offset position) {
     Path path = makeWiderLinePath(scale * (5 + linkStyle.lineWidth));
     return path.contains(position);
+  }
+
+  void drawLineSegment(Canvas canvas, int i, Paint paint) {
+    if (linkPoints.length == 2) {
+      canvas.drawPath(
+        linkStyle.getLinePath(
+          VectorUtils.getShorterLineStart(
+            linkPoints[i],
+            linkPoints[i + 1],
+            scale * linkStyle.getEndShortening(linkStyle.backArrowType),
+          ),
+          VectorUtils.getShorterLineEnd(
+            linkPoints[i],
+            linkPoints[i + 1],
+            scale * linkStyle.getEndShortening(linkStyle.arrowType),
+          ),
+          scale,
+        ),
+        paint,
+      );
+    } else if (i == 0) {
+      canvas.drawPath(
+        linkStyle.getLinePath(
+          VectorUtils.getShorterLineStart(
+            linkPoints[i],
+            linkPoints[i + 1],
+            scale * linkStyle.getEndShortening(linkStyle.backArrowType),
+          ),
+          linkPoints[i + 1],
+          scale,
+        ),
+        paint,
+      );
+    } else if (i == linkPoints.length - 2) {
+      canvas.drawPath(
+        linkStyle.getLinePath(
+          linkPoints[i],
+          VectorUtils.getShorterLineEnd(
+            linkPoints[i],
+            linkPoints[i + 1],
+            scale * linkStyle.getEndShortening(linkStyle.arrowType),
+          ),
+          scale,
+        ),
+        paint,
+      );
+    } else {
+      canvas.drawPath(
+          linkStyle.getLinePath(linkPoints[i], linkPoints[i + 1], scale),
+          paint);
+    }
   }
 
   Path makeWiderLinePath(double hitAreaWidth) {

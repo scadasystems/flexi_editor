@@ -35,7 +35,8 @@ class FlexiEditorCanvas extends StatefulWidget {
   FlexiEditorCanvasState createState() => FlexiEditorCanvasState();
 }
 
-class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
+class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
+    with TickerProviderStateMixin {
   late PolicySet withControlPolicy;
 
   @override
@@ -91,7 +92,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, data, child) {
-              return widget.policy.showCustomWidgetWithComponentDataUnder(context, data);
+              return widget.policy
+                  .showCustomWidgetWithComponentDataUnder(context, data);
             },
           );
         },
@@ -106,7 +108,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, data, child) {
-              return widget.policy.showCustomWidgetWithComponentDataOver(context, data);
+              return widget.policy
+                  .showCustomWidgetWithComponentDataOver(context, data);
             },
           );
         },
@@ -130,8 +133,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
           fit: StackFit.expand,
           children: [
             ...showComponents(model),
-            ...showLinks(model),
             ...showOtherWithComponentDataOver(model),
+            ...showLinks(model),
             ...showForegroundWidgets(),
           ],
         );
@@ -140,7 +143,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
   }
 
   Widget canvasAnimated() {
-    final animationController = (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    final animationController =
+        (withControlPolicy as CanvasControlPolicy).getAnimationController();
     if (animationController == null) return canvasStack();
 
     return AnimatedBuilder(
