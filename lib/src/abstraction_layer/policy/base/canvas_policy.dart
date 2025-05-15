@@ -10,8 +10,6 @@ mixin CanvasPolicy on BasePolicySet {
 
   void onCanvasTapCancel() {}
 
-  void onCanvasLongPress() {}
-
   void onCanvasScaleStart(ScaleStartDetails details) {}
 
   void onCanvasScaleUpdate(ScaleUpdateDetails details) {}
@@ -23,14 +21,6 @@ mixin CanvasPolicy on BasePolicySet {
   void onCanvasScaleUpdateEvent(ScaleUpdateDetails details) {}
 
   void onCanvasScaleEndEvent(ScaleEndDetails details) {}
-
-  void onCanvasLongPressStart(LongPressStartDetails details) {}
-
-  void onCanvasLongPressMoveUpdate(LongPressMoveUpdateDetails details) {}
-
-  void onCanvasLongPressEnd(LongPressEndDetails details) {}
-
-  void onCanvasLongPressUp() {}
 
   void onCanvasPointerSignal(PointerSignalEvent event) {}
 

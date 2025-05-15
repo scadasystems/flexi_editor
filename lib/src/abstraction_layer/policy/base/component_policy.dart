@@ -14,21 +14,12 @@ mixin ComponentPolicy on BasePolicySet {
 
   void onComponentTapCancel(String componentId) {}
 
-  void onComponentScaleStart(String componentId, ScaleStartDetails details, {bool forceMove = false}) {}
+  void onComponentScaleStart(String componentId, ScaleStartDetails details,
+      {bool forceMove = false}) {}
 
   void onComponentScaleUpdate(String componentId, ScaleUpdateDetails details) {}
 
   void onComponentScaleEnd(String componentId, ScaleEndDetails details) {}
 
-  void onComponentLongPress(String componentId) {}
-
-  void onComponentLongPressStart(String componentId, LongPressStartDetails details) {}
-
-  void onComponentLongPressMoveUpdate(String componentId, LongPressMoveUpdateDetails details) {}
-
-  void onComponentLongPressEnd(String componentId, LongPressEndDetails details) {}
-
-  void onComponentLongPressUp(String componentId) {}
-
-  void onComponentPointerSignal(String componentId, PointerSignalEvent event) {}
+  void onComponentDoubleTap(String componentId) {}
 }

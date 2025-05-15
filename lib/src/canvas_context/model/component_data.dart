@@ -10,6 +10,7 @@ class ComponentData<T> with ChangeNotifier {
   final String type;
   String? subtype;
   int zOrder = 0;
+  bool locked = false;
   String? parentId;
   final List<String> childrenIds = [];
   final List<Connection> connections = [];
@@ -71,6 +72,12 @@ class ComponentData<T> with ChangeNotifier {
 
   void setZOrder(int zOrder) {
     this.zOrder = zOrder;
+    notifyListeners();
+  }
+
+  void setLocked(bool locked) {
+    this.locked = locked;
+    notifyListeners();
   }
 
   void addChild(String childId) {

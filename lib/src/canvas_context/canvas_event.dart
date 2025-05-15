@@ -5,6 +5,9 @@ class CanvasEvent with ChangeNotifier {
   final _keyboardFocusNode = FocusNode();
   FocusNode get keyboardFocusNode => _keyboardFocusNode;
 
+  bool _disableKeyboardEvents = false;
+  bool get disableKeyboardEvents => _disableKeyboardEvents;
+
   bool _isSpacePressed = false;
   bool get isSpacePressed => _isSpacePressed;
 
@@ -20,6 +23,9 @@ class CanvasEvent with ChangeNotifier {
   bool _isStartDragSelection = true;
   bool get isStartDragSelection => _isStartDragSelection;
 
+  bool _isTapComponent = false;
+  bool get isTapComponent => _isTapComponent;
+
   @override
   void dispose() {
     _keyboardFocusNode.dispose();
@@ -31,7 +37,17 @@ class CanvasEvent with ChangeNotifier {
   }
 
   void unfocus() {
-    _keyboardFocusNode.unfocus();
+    _keyboardFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+  }
+
+  void enableKeyboardEvent() {
+    _disableKeyboardEvents = false;
+    requestFocus();
+  }
+
+  void disableKeyboardEvent() {
+    _disableKeyboardEvents = true;
+    unfocus();
   }
 
   /// 스페이스바 눌림 상태 변경
@@ -82,5 +98,13 @@ class CanvasEvent with ChangeNotifier {
     _startDragPosition = null;
     _currentDragPosition = null;
     notifyListeners();
+  }
+
+  void startTapComponent() {
+    _isTapComponent = true;
+  }
+
+  void endTapComponent() {
+    _isTapComponent = false;
   }
 }
