@@ -39,10 +39,8 @@ class _ComponentState extends State<Component> {
           _lastDynamicData = Map.from(currentDynamicData);
         }
 
-        final left =
-            canvasState.scale * component.position.dx + canvasState.position.dx;
-        final top =
-            canvasState.scale * component.position.dy + canvasState.position.dy;
+        final left = canvasState.scale * component.position.dx + canvasState.position.dx;
+        final top = canvasState.scale * component.position.dy + canvasState.position.dy;
         final width = canvasState.scale * component.size.width;
         final height = canvasState.scale * component.size.height;
 
@@ -54,47 +52,54 @@ class _ComponentState extends State<Component> {
           width: width,
           height: height,
           child: MouseRegion(
-            onEnter: !hasChildren
-                ? (_) => widget.policy.onComponentEnter(component.id)
-                : null,
-            onExit: !hasChildren
-                ? (_) => widget.policy.onComponentExit(component.id)
-                : null,
+            onEnter: !hasChildren ? (_) => widget.policy.onComponentEnter(component.id) : null,
+            onExit: !hasChildren ? (_) => widget.policy.onComponentExit(component.id) : null,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: canvasEvent.isStartDragSelection //
-                  ? () => widget.policy.onComponentTap(component.id)
+              onTap: !hasChildren
+                  ? canvasEvent.isStartDragSelection //
+                      ? () => widget.policy.onComponentTap(component.id)
+                      : null
                   : null,
-              onTapDown: canvasEvent.isStartDragSelection
-                  ? (details) {
-                      canvasEvent.startTapComponent();
-                      widget.policy.onComponentTapDown(component.id, details);
-                    }
+              onTapDown: !hasChildren
+                  ? canvasEvent.isStartDragSelection
+                      ? (details) {
+                          canvasEvent.startTapComponent();
+                          widget.policy.onComponentTapDown(component.id, details);
+                        }
+                      : null
                   : null,
-              onTapUp: canvasEvent.isStartDragSelection
-                  ? (details) {
-                      canvasEvent.endTapComponent();
-                      widget.policy.onComponentTapUp(component.id, details);
-                    }
+              onTapUp: !hasChildren
+                  ? canvasEvent.isStartDragSelection
+                      ? (details) {
+                          canvasEvent.endTapComponent();
+                          widget.policy.onComponentTapUp(component.id, details);
+                        }
+                      : null
                   : null,
-              onTapCancel: canvasEvent.isStartDragSelection //
-                  ? () => widget.policy.onComponentTapCancel(component.id)
+              onTapCancel: !hasChildren
+                  ? canvasEvent.isStartDragSelection //
+                      ? () => widget.policy.onComponentTapCancel(component.id)
+                      : null
                   : null,
-              onDoubleTap: () =>
-                  widget.policy.onComponentDoubleTap(component.id),
-              onScaleStart: canvasEvent.isStartDragSelection
-                  ? (details) =>
-                      widget.policy.onComponentScaleStart(component.id, details)
+              onDoubleTap: !hasChildren ? () => widget.policy.onComponentDoubleTap(component.id) : null,
+              onScaleStart: !hasChildren
+                  ? canvasEvent.isStartDragSelection
+                      ? (details) => widget.policy.onComponentScaleStart(component.id, details)
+                      : null
                   : null,
-              onScaleUpdate: canvasEvent.isStartDragSelection
-                  ? (details) => widget.policy
-                      .onComponentScaleUpdate(component.id, details)
+              onScaleUpdate: !hasChildren
+                  ? canvasEvent.isStartDragSelection
+                      ? (details) => widget.policy.onComponentScaleUpdate(component.id, details)
+                      : null
                   : null,
-              onScaleEnd: canvasEvent.isStartDragSelection
-                  ? (details) {
-                      canvasEvent.endTapComponent();
-                      widget.policy.onComponentScaleEnd(component.id, details);
-                    }
+              onScaleEnd: !hasChildren
+                  ? canvasEvent.isStartDragSelection
+                      ? (details) {
+                          canvasEvent.endTapComponent();
+                          widget.policy.onComponentScaleEnd(component.id, details);
+                        }
+                      : null
                   : null,
               child: Stack(
                 clipBehavior: Clip.none,
@@ -109,8 +114,7 @@ class _ComponentState extends State<Component> {
                       child: _componentBody,
                     ),
                   ),
-                  widget.policy
-                      .showCustomWidgetWithComponentData(context, component),
+                  widget.policy.showCustomWidgetWithComponentData(context, component),
                 ],
               ),
             ),
