@@ -23,4 +23,11 @@ mixin ComponentWidgetsPolicy on BasePolicySet {
   ) {
     return const SizedBox.shrink();
   }
+
+  Widget showForgroundCustomWidgetWithComponentDataOver(
+    BuildContext context,
+    ComponentData componentData,
+  ) {
+    return const SizedBox.shrink();
+  }
 }

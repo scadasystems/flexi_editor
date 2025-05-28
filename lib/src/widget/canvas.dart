@@ -118,6 +118,21 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     return widget.policy.showCustomWidgetsOnCanvasForeground(context);
   }
 
+  List<Widget> showForgroundCustomWidgetWithComponentDataOver(CanvasModel canvasModel) {
+    return canvasModel.components.values.map((ComponentData componentData) {
+      return ChangeNotifierProvider<ComponentData>.value(
+        value: componentData,
+        builder: (context, child) {
+          return Consumer<ComponentData>(
+            builder: (context, data, child) {
+              return widget.policy.showForgroundCustomWidgetWithComponentDataOver(context, data);
+            },
+          );
+        },
+      );
+    }).toList();
+  }
+
   Widget canvasStack() {
     return Consumer2<CanvasState, CanvasModel>(
       builder: (context, state, model, child) {
@@ -129,6 +144,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
             ...showOtherWithComponentDataOver(model),
             ...showLinks(model),
             ...showForegroundWidgets(),
+            ...showForgroundCustomWidgetWithComponentDataOver(model),
           ],
         );
       },
