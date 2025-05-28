@@ -5,25 +5,31 @@ import 'package:uuid/uuid.dart';
 
 class ComponentData<T> with ChangeNotifier {
   final String id;
-  Offset position;
-  Size size;
   final String type;
   String? subtype;
+  Offset position;
+  Size size;
   int zOrder = 0;
   bool locked = false;
   String? parentId;
-  final List<String> childrenIds = [];
-  final List<Connection> connections = [];
+  final List<String> childrenIds;
+  final List<Connection> connections;
   final T? data;
 
   ComponentData({
     String? id,
-    this.position = Offset.zero,
-    this.size = const Size(100, 100),
     required this.type,
     this.subtype,
+    this.position = Offset.zero,
+    this.size = const Size(100, 100),
+    this.parentId,
+    this.zOrder = 0,
+    List<String>? childrenIds,
+    List<Connection>? connections,
     this.data,
-  }) : id = id ?? const Uuid().v4();
+  })  : id = id ?? const Uuid().v4(),
+        childrenIds = childrenIds ?? [],
+        connections = connections ?? [];
 
   void refresh() => notifyListeners();
 
@@ -70,11 +76,6 @@ class ComponentData<T> with ChangeNotifier {
     parentId = null;
   }
 
-  void setZOrder(int zOrder) {
-    this.zOrder = zOrder;
-    notifyListeners();
-  }
-
   void setLocked(bool locked) {
     this.locked = locked;
     notifyListeners();
@@ -102,16 +103,13 @@ class ComponentData<T> with ChangeNotifier {
         subtype = json['subtype'],
         zOrder = json['z_order'],
         parentId = json['parent_id'],
-        data = decodeCustomComponentData?.call(json['dynamic_data'] ?? {}) {
-    childrenIds.addAll(
-      (json['children_ids'] as List).map((id) => id as String).toList(),
-    );
-    connections.addAll(
-      (json['connections'] as List).map((connectionJson) {
-        return Connection.fromJson(connectionJson);
-      }),
-    );
-  }
+        childrenIds = json['children_ids'] != null //
+            ? (json['children_ids'] as List).map((id) => id.toString()).toList()
+            : [],
+        connections = json['connections'] != null
+            ? (json['connections'] as List).map((connectionJson) => Connection.fromJson(connectionJson)).toList()
+            : [],
+        data = decodeCustomComponentData?.call(json['dynamic_data'] ?? {});
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -142,11 +140,10 @@ class ComponentData<T> with ChangeNotifier {
       size: size ?? this.size,
       type: type ?? this.type,
       subtype: subtype ?? this.subtype,
+      zOrder: zOrder ?? this.zOrder,
+      parentId: parentId ?? this.parentId,
       data: data ?? this.data,
     );
-
-    component.setZOrder(zOrder ?? this.zOrder);
-    component.setParent(parentId ?? this.parentId);
 
     return component;
   }
