@@ -49,6 +49,7 @@ class Link extends StatelessWidget {
               ...linkData.linkPoints.getRange(1, linkData.linkPoints.length - 1).map(
                 (jointPoint) {
                   var index = linkData.linkPoints.indexOf(jointPoint);
+
                   return GestureDetector(
                     onTap: () => policy.onLinkJointTap(index, linkData.id),
                     onTapDown: (details) => policy.onLinkJointTapDown(index, linkData.id, details),

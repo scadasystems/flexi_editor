@@ -75,23 +75,21 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   List<Widget> showLinks(CanvasModel canvasModel) {
     return canvasModel.links.values.map((LinkData linkData) {
-      return ChangeNotifierProvider<LinkData>.value(
+      return ChangeNotifierProvider.value(
         value: linkData,
-        child: Link(
-          policy: widget.policy,
-        ),
+        child: Link(policy: widget.policy),
       );
     }).toList();
   }
 
   List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
     return canvasModel.components.values.map((ComponentData componentData) {
-      return ChangeNotifierProvider<ComponentData>.value(
+      return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<ComponentData>(
-            builder: (context, data, child) {
-              return widget.policy.showCustomWidgetWithComponentDataUnder(context, data);
+            builder: (context, value, child) {
+              return widget.policy.showCustomWidgetWithComponentDataUnder(context, componentData);
             },
           );
         },
@@ -101,12 +99,12 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   List<Widget> showOtherWithComponentDataOver(CanvasModel canvasModel) {
     return canvasModel.components.values.map((ComponentData componentData) {
-      return ChangeNotifierProvider<ComponentData>.value(
+      return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<ComponentData>(
-            builder: (context, data, child) {
-              return widget.policy.showCustomWidgetWithComponentDataOver(context, data);
+            builder: (context, value, child) {
+              return widget.policy.showCustomWidgetWithComponentDataOver(context, value);
             },
           );
         },
@@ -120,7 +118,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
 
   List<Widget> showForgroundCustomWidgetWithComponentDataOver(CanvasModel canvasModel) {
     return canvasModel.components.values.map((ComponentData componentData) {
-      return ChangeNotifierProvider<ComponentData>.value(
+      return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<ComponentData>(
@@ -134,12 +132,30 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
   }
 
   Widget canvasStack() {
-    return Consumer2<CanvasState, CanvasModel>(
-      builder: (context, state, model, child) {
+    return Consumer3<CanvasState, CanvasEvent, CanvasModel>(
+      builder: (context, state, event, model, child) {
         return Stack(
           clipBehavior: Clip.none,
           fit: StackFit.expand,
           children: [
+            GestureDetector(
+                onTap: () {
+                  if (event.isTapComponent) return;
+                  widget.policy.onCanvasTap();
+                },
+                onTapDown: (details) {
+                  if (event.isTapComponent) return;
+                  widget.policy.onCanvasTapDown(details);
+                },
+                onTapUp: (details) {
+                  if (event.isTapComponent) return;
+                  widget.policy.onCanvasTapUp(details);
+                },
+                onTapCancel: () {
+                  if (event.isTapComponent) return;
+                  widget.policy.onCanvasTapCancel();
+                },
+                child: Container(color: Colors.transparent)),
             ...showComponents(model),
             ...showOtherWithComponentDataOver(model),
             ...showLinks(model),
@@ -179,22 +195,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     final canvasState = context.read<CanvasState>();
 
     return GestureDetector(
-      onTap: () {
-        if (canvasEvent.isTapComponent) return;
-        widget.policy.onCanvasTap();
-      },
-      onTapDown: (details) {
-        if (canvasEvent.isTapComponent) return;
-        widget.policy.onCanvasTapDown(details);
-      },
-      onTapUp: (details) {
-        if (canvasEvent.isTapComponent) return;
-        widget.policy.onCanvasTapUp(details);
-      },
-      onTapCancel: () {
-        if (canvasEvent.isTapComponent) return;
-        widget.policy.onCanvasTapCancel();
-      },
       onScaleStart: (details) {
         widget.onSelectionRectStart?.call();
 
@@ -220,12 +220,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
           widget.policy.onCanvasScaleEndEvent(details);
         }
       },
-      child: ClipRect(
-        child: Container(
-          color: canvasState.color,
-          child: canvasAnimated(),
-        ),
-      ),
+      child: Container(color: canvasState.color, child: canvasAnimated()),
     );
   }
 

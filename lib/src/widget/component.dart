@@ -56,31 +56,23 @@ class _ComponentState extends State<Component> {
             onExit: !hasChildren ? (_) => widget.policy.onComponentExit(component.id) : null,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: !hasChildren
-                  ? canvasEvent.isStartDragSelection //
-                      ? () => widget.policy.onComponentTap(component.id)
-                      : null
+              onTap: canvasEvent.isStartDragSelection //
+                  ? () => widget.policy.onComponentTap(component.id)
                   : null,
-              onTapDown: !hasChildren
-                  ? canvasEvent.isStartDragSelection
-                      ? (details) {
-                          canvasEvent.startTapComponent();
-                          widget.policy.onComponentTapDown(component.id, details);
-                        }
-                      : null
+              onTapDown: canvasEvent.isStartDragSelection
+                  ? (details) {
+                      canvasEvent.startTapComponent();
+                      widget.policy.onComponentTapDown(component.id, details);
+                    }
                   : null,
-              onTapUp: !hasChildren
-                  ? canvasEvent.isStartDragSelection
-                      ? (details) {
-                          canvasEvent.endTapComponent();
-                          widget.policy.onComponentTapUp(component.id, details);
-                        }
-                      : null
+              onTapUp: canvasEvent.isStartDragSelection
+                  ? (details) {
+                      canvasEvent.endTapComponent();
+                      widget.policy.onComponentTapUp(component.id, details);
+                    }
                   : null,
-              onTapCancel: !hasChildren
-                  ? canvasEvent.isStartDragSelection //
-                      ? () => widget.policy.onComponentTapCancel(component.id)
-                      : null
+              onTapCancel: canvasEvent.isStartDragSelection //
+                  ? () => widget.policy.onComponentTapCancel(component.id)
                   : null,
               onDoubleTap: !hasChildren ? () => widget.policy.onComponentDoubleTap(component.id) : null,
               onScaleStart: !hasChildren
