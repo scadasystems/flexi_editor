@@ -17,14 +17,14 @@ mixin ComponentWidgetsPolicy on BasePolicySet {
     return const SizedBox.shrink();
   }
 
-  Widget showCustomWidgetWithComponentDataOver(
+  Widget buildComponentOverWidget(
     BuildContext context,
     ComponentData componentData,
   ) {
     return const SizedBox.shrink();
   }
 
-  Widget showForgroundCustomWidgetWithComponentDataOver(
+  Widget buildLinkOverWidget(
     BuildContext context,
     ComponentData componentData,
   ) {

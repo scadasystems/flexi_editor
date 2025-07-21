@@ -100,15 +100,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     }).toList();
   }
 
-  List<Widget> showOtherWithComponentDataOver(CanvasModel canvasModel) {
+  List<Widget> buildComponentOverWidget(CanvasModel canvasModel) {
     return canvasModel.components.values.map((ComponentData componentData) {
       return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, value, child) {
-              return widget.policy
-                  .showCustomWidgetWithComponentDataOver(context, value);
+              return widget.policy.buildComponentOverWidget(context, value);
             },
           );
         },
@@ -120,17 +119,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     return widget.policy.showCustomWidgetsOnCanvasForeground(context);
   }
 
-  List<Widget> showForgroundCustomWidgetWithComponentDataOver(
-      CanvasModel canvasModel) {
+  List<Widget> buildLinkOverWidget(CanvasModel canvasModel) {
     return canvasModel.components.values.map((ComponentData componentData) {
       return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<ComponentData>(
             builder: (context, data, child) {
-              return widget.policy
-                  .showForgroundCustomWidgetWithComponentDataOver(
-                      context, data);
+              return widget.policy.buildLinkOverWidget(context, data);
             },
           );
         },
@@ -165,10 +161,10 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                   },
                   child: Container(color: Colors.transparent)),
               ...showComponents(model),
-              ...showOtherWithComponentDataOver(model),
+              ...buildComponentOverWidget(model),
               ...showLinks(model),
               ...showForegroundWidgets(),
-              ...showForgroundCustomWidgetWithComponentDataOver(model),
+              ...buildLinkOverWidget(model),
             ],
           ),
         );
