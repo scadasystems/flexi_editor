@@ -4,6 +4,9 @@ class DeleteIconPainter extends CustomPainter {
   final Offset location;
   final double radius;
   final Color color;
+  
+  static const double _backgroundAlpha = 0.8;
+  static const double _borderStrokeWidth = 2.0;
 
   DeleteIconPainter({
     required this.location,
@@ -14,7 +17,7 @@ class DeleteIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     var paint = Paint()
-      ..color = Colors.white.withOpacity(0.8)
+      ..color = Colors.white.withValues(alpha: _backgroundAlpha)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(location, radius, paint);
@@ -22,7 +25,7 @@ class DeleteIconPainter extends CustomPainter {
     paint
       ..style = PaintingStyle.stroke
       ..color = Colors.grey
-      ..strokeWidth = 2;
+      ..strokeWidth = _borderStrokeWidth;
 
     canvas.drawCircle(location, radius, paint);
 
@@ -43,18 +46,16 @@ class DeleteIconPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant DeleteIconPainter oldDelegate) {
+    return location != oldDelegate.location ||
+           radius != oldDelegate.radius ||
+           color != oldDelegate.color;
+  }
 
   @override
   bool hitTest(Offset position) {
-    Path path = Path();
-    path.addOval(
-      Rect.fromCircle(
-        center: location,
-        radius: radius,
-      ),
-    );
-
-    return path.contains(position);
+    final dx = position.dx - location.dx;
+    final dy = position.dy - location.dy;
+    return dx * dx + dy * dy <= radius * radius;
   }
 }

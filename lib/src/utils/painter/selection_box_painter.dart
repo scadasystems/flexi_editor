@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+class UIConstants {
+  static const double selectionBoxStrokeWidth = 2.0;
+  static const double selectionBoxAlpha = 0.3;
+}
+
 class SelectionBoxPainter extends CustomPainter {
   final Offset startPosition;
   final Offset endPosition;
@@ -9,7 +14,7 @@ class SelectionBoxPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.blue.withOpacity(0.3)
+      ..color = Colors.blue.withValues(alpha: UIConstants.selectionBoxAlpha)
       ..style = PaintingStyle.fill;
 
     final rect = Rect.fromPoints(startPosition, endPosition);
@@ -18,11 +23,14 @@ class SelectionBoxPainter extends CustomPainter {
     final borderPaint = Paint()
       ..color = Colors.blue
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = UIConstants.selectionBoxStrokeWidth;
 
     canvas.drawRect(rect, borderPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant SelectionBoxPainter oldDelegate) {
+    return startPosition != oldDelegate.startPosition || 
+           endPosition != oldDelegate.endPosition;
+  }
 }
