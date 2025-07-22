@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
 import 'package:flutter/gestures.dart';
@@ -80,29 +79,55 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void onCanvasPointerSignal(PointerSignalEvent event) {
-    if (event is! PointerScrollEvent) return;
+    // 트랙패드 두 손가락 스크롤 이벤트 처리 (캔버스 이동)
+    if (event is PointerScrollEvent) {
+      // 스크롤 델타를 캔버스 이동으로 변환
+      Offset panDelta = event.scrollDelta;
+      
+      // 캔버스 위치 업데이트 (스크롤 방향의 반대로 이동)
+      canvasWriter.state.updatePosition(-panDelta);
+      canvasWriter.state.updateCanvas();
+      return;
+    }
 
-    // double scaleChange = event.scrollDelta.dy < 0 //
-    //     ? 1 / canvasReader.state.mouseScaleSpeed
-    //     : canvasReader.state.mouseScaleSpeed;
+    // 트랙패드 Scale 이벤트 처리 (Pinch Zoom)
+    if (event.runtimeType.toString().contains('Scale')) {
+      try {
+        // 이벤트에서 스케일 정보 추출
+        final dynamic scaleEvent = event;
+        dynamic scaleValue;
+        
+        try { scaleValue = scaleEvent.scale; } catch (_) {}
+        
+        if (scaleValue != null && scaleValue != 1.0) {
+          double scaleChange = scaleValue;
+          scaleChange = keepScaleInBounds(scaleChange, canvasReader.state.scale);
+          
+          if (scaleChange == 0.0) return;
 
-    //TODO: [스튜디오] Zoom 가속도 계산
-    double scaleChange = math.exp(-event.scrollDelta.dy / 1000);
+          double previousScale = canvasReader.state.scale;
+          Offset previousPosition = canvasReader.state.position;
 
-    scaleChange = keepScaleInBounds(scaleChange, canvasReader.state.scale);
+          canvasWriter.state.updateScale(scaleChange);
 
-    if (scaleChange == 0.0) return;
+          // 포커스 포인트 계산 (트랙패드 pinch 중심점)
+          Offset focalPoint;
+          try { 
+            focalPoint = scaleEvent.focalPoint ?? scaleEvent.localPosition ?? event.localPosition;
+          } catch (_) {
+            focalPoint = event.localPosition;
+          }
+          
+          var relativeFocalPoint = (focalPoint - previousPosition);
+          var focalPointScaled = relativeFocalPoint * (canvasReader.state.scale / previousScale);
 
-    double previousScale = canvasReader.state.scale;
-    Offset previousPosition = canvasReader.state.position;
-
-    canvasWriter.state.updateScale(scaleChange);
-
-    var focalPoint = (event.localPosition - previousPosition);
-    var focalPointScaled = focalPoint * (canvasReader.state.scale / previousScale);
-
-    canvasWriter.state.updatePosition(focalPoint - focalPointScaled);
-    canvasWriter.state.updateCanvas();
+          canvasWriter.state.updatePosition(relativeFocalPoint - focalPointScaled);
+          canvasWriter.state.updateCanvas();
+        }
+      } catch (e) {
+        // Scale 이벤트 처리 실패 시 무시
+      }
+    }
   }
 
   double keepScaleInBounds(double scale, double canvasScale) {

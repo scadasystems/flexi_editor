@@ -387,45 +387,24 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           child: Listener(
             onPointerDown: (event) {
               _activePointers++;
-              debugPrint(
-                  '👇 포인터 다운 - ID: ${event.pointer}, 총 개수: $_activePointers, 위치: ${event.localPosition}');
               // 두 개의 포인터가 감지되면 pinch 시작으로 간주
               if (_activePointers == 2) {
                 _isPinchActive = true;
-                debugPrint('🤏 Pinch 시작 - 두 손가락 감지됨');
               }
             },
             onPointerUp: (event) {
               _activePointers--;
-              debugPrint(
-                  '👆 포인터 업 - ID: ${event.pointer}, 총 개수: $_activePointers, 위치: ${event.localPosition}');
               // 포인터가 2개 미만이 되면 pinch 종료
               if (_activePointers < 2 && _isPinchActive) {
                 _isPinchActive = false;
-                debugPrint('🤏 Pinch 종료 - 손가락 개수: $_activePointers');
-              }
-            },
-            onPointerMove: (event) {
-              // Pinch 상태에서만 move 이벤트 로그 출력 (스팸 방지를 위해 큰 움직임만)
-              if (_isPinchActive && event.delta.distance > 2) {
-                debugPrint(
-                    '🤏 Pinch Move - 포인터 ID: ${event.pointer}, 위치: ${event.localPosition}, 델타: ${event.delta}');
               }
             },
             onPointerPanZoomStart: (event) {
               _isPinchActive = true;
-              debugPrint('🤏 트랙패드 Pan-Zoom 시작 - 위치: ${event.localPosition}');
-            },
-            onPointerPanZoomUpdate: (event) {
-              if (_isPinchActive) {
-                debugPrint(
-                    '🤏 트랙패드 Pan-Zoom 업데이트 - 위치: ${event.localPosition}, 델타: ${event.localPanDelta}, 스케일: ${event.scale.toStringAsFixed(3)}');
-              }
             },
             onPointerPanZoomEnd: (event) {
               if (_isPinchActive) {
                 _isPinchActive = false;
-                debugPrint('🤏 트랙패드 Pan-Zoom 종료');
               }
             },
             onPointerSignal: (event) {
@@ -442,13 +421,19 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                         ? '수평'
                         : '수직';
                 debugPrint(
-                    '🤏 트랙패드 두 손가락 드래그 - 위치: ${event.localPosition}, 스크롤 델타: ${event.scrollDelta}, 방향: $scrollDirection, 세기: ${scrollMagnitude.toStringAsFixed(1)}');
-                
+                    '🤏 트랙패드 두 손가락 드래그 - 방향: $scrollDirection, 세기: ${scrollMagnitude.toStringAsFixed(1)}');
+
+                // 캔버스 이동 정보 로그
+                final canvasState = context.read<CanvasState>();
+                final newPosition = canvasState.position - event.scrollDelta;
+                // debugPrint('🔄 캔버스 이동: ${canvasState.position} → $newPosition');
+
                 // 트랙패드 드래그는 onCanvasPointerSignal 호출하지 않음
                 return;
               }
               // Scale 이벤트는 pinch/zoom 으로 처리
               else if (event.runtimeType.toString().contains('Scale')) {
+                /*
                 // 트랙패드 pinch 시작 시 상태 활성화
                 if (!_isPinchActive) {
                   _isPinchActive = true;
@@ -487,8 +472,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                         : scaleValue < 1.0
                             ? 'Zoom Out'
                             : 'No Change';
-                    debugPrint(
-                        '🤏 Trackpad Pinch - Scale: ${scaleValue.toStringAsFixed(3)}, Direction: $direction');
                     if (focusPoint != null) {
                       debugPrint('🤏 Trackpad Pinch - Focus: $focusPoint');
                     }
@@ -498,18 +481,18 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                     // 대안: 전체 이벤트 정보만 표시
                     debugPrint('🤏 Trackpad Pinch - Event: $event');
                   }
-
-                  // 트랙패드 Pinch도 onCanvasPointerSignal 호출하지 않음
-                  return;
                 } catch (e) {
                   debugPrint('🚫 Could not extract scale info: $e');
                   debugPrint('🤏 Raw Trackpad Event: $event');
-                  // 에러 발생 시에도 onCanvasPointerSignal 호출하지 않음
-                  return;
                 }
+                */
+
+                // Scale 이벤트를 정책으로 전달 (onCanvasPointerSignal에서 처리)
+                widget.policy.onCanvasPointerSignal(event);
+                return;
               }
 
-              // 다른 이벤트만 정책으로 전달
+              // 다른 이벤트들도 정책으로 전달
               widget.policy.onCanvasPointerSignal(event);
             },
             child: Stack(
