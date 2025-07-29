@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+
 import 'package:defer_pointer/defer_pointer.dart';
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
@@ -6,6 +7,7 @@ import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flexi_editor/src/widget/link.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +40,15 @@ class FlexiEditorCanvas extends StatefulWidget {
 class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     with TickerProviderStateMixin {
   late PolicySet withControlPolicy;
+  List<ComponentData> _cachedZOrderedComponents = [];
+  List<Widget> _cachedComponentWidgets = [];
+  List<Widget> _cachedLinkWidgets = [];
+
+  // Pinch 상태 추적을 위한 변수들
+  bool _isPinchActive = false;
+  int _activePointers = 0;
+
+  static const Duration _animationDuration = Duration(milliseconds: 300);
 
   @override
   void initState() {
@@ -47,7 +58,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
 
     (withControlPolicy as CanvasControlPolicy?)?.setAnimationController(
       AnimationController(
-        duration: const Duration(milliseconds: 300),
+        duration: _animationDuration,
         vsync: this,
       ),
     );
@@ -60,28 +71,52 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   List<Widget> showComponents(CanvasModel canvasModel) {
-    final zOrderedComponents = canvasModel.components.values.toList();
-    zOrderedComponents.sort((a, b) => a.zOrder.compareTo(b.zOrder));
+    final currentComponents = canvasModel.components.values.toList();
+    currentComponents.sort((a, b) => a.zOrder.compareTo(b.zOrder));
 
-    return zOrderedComponents
-        .map(
-          (componentData) => ChangeNotifierProvider<ComponentData>.value(
-            value: componentData,
-            child: Component(
-              policy: widget.policy,
+    // 컴포넌트가 변경되었는지 확인
+    if (_cachedZOrderedComponents.length != currentComponents.length ||
+        !_areComponentListsEqual(
+            _cachedZOrderedComponents, currentComponents)) {
+      _cachedZOrderedComponents = currentComponents;
+      _cachedComponentWidgets = currentComponents
+          .map(
+            (componentData) => ChangeNotifierProvider<ComponentData>.value(
+              value: componentData,
+              child: Component(
+                policy: widget.policy,
+              ),
             ),
-          ),
-        )
-        .toList();
+          )
+          .toList();
+    }
+
+    return _cachedComponentWidgets;
+  }
+
+  bool _areComponentListsEqual(
+      List<ComponentData> list1, List<ComponentData> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i] != list2[i]) return false;
+    }
+    return true;
   }
 
   List<Widget> showLinks(CanvasModel canvasModel) {
-    return canvasModel.links.values.map((LinkData linkData) {
-      return ChangeNotifierProvider.value(
-        value: linkData,
-        child: Link(policy: widget.policy),
-      );
-    }).toList();
+    final currentLinks = canvasModel.links.values.toList();
+
+    // 링크 길이를 먼저 비교하여 변경 여부를 간단히 확인
+    if (_cachedLinkWidgets.length != currentLinks.length) {
+      _cachedLinkWidgets = currentLinks.map((LinkData linkData) {
+        return ChangeNotifierProvider.value(
+          value: linkData,
+          child: Link(policy: widget.policy),
+        );
+      }).toList();
+    }
+
+    return _cachedLinkWidgets;
   }
 
   List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
@@ -350,7 +385,55 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
             canvasEvent.unfocus();
           },
           child: Listener(
-            onPointerSignal: widget.policy.onCanvasPointerSignal,
+            onPointerDown: (event) {
+              _activePointers++;
+              // 두 개의 포인터가 감지되면 pinch 시작으로 간주
+              if (_activePointers == 2) {
+                _isPinchActive = true;
+              }
+            },
+            onPointerUp: (event) {
+              _activePointers--;
+              // 포인터가 2개 미만이 되면 pinch 종료
+              if (_activePointers < 2 && _isPinchActive) {
+                _isPinchActive = false;
+              }
+            },
+            onPointerPanZoomStart: (event) {
+              _isPinchActive = true;
+            },
+            onPointerPanZoomEnd: (event) {
+              if (_isPinchActive) {
+                _isPinchActive = false;
+              }
+            },
+            onPointerSignal: (event) {
+              // PointerScrollEvent는 CanvasControlPolicy의 onCanvasPointerSignal에서 직접 처리
+              if (event is PointerScrollEvent) {
+                // 입력 장치 타입에 따라 다른 로그 출력
+                // final deviceType = event.kind;
+                // if (deviceType == PointerDeviceKind.trackpad) {
+                //   debugPrint('🤏 트랙패드 두 손가락 드래그 (캔버스 이동): ${event.scrollDelta}');
+                // } else if (deviceType == PointerDeviceKind.mouse) {
+                //   final zoomDirection = event.scrollDelta.dy < 0 ? '줌 인' : '줌 아웃';
+                //   debugPrint('🖱️ 마우스 스크롤 ($zoomDirection): ${event.scrollDelta}');
+                // } else {
+                //   debugPrint('📱 기타 장치 스크롤 ($deviceType): ${event.scrollDelta}');
+                // }
+
+                widget.policy.onCanvasPointerSignal(event);
+                return;
+              }
+              // Scale 이벤트는 pinch/zoom 으로 처리
+              else if (event.runtimeType.toString().contains('Scale')) {
+                // Scale 이벤트를 정책으로 전달 (onCanvasPointerSignal에서 처리)
+                widget.policy.onCanvasPointerSignal(event);
+                return;
+              }
+
+              // 다른 이벤트들도 정책으로 전달
+              widget.policy.onCanvasPointerSignal(event);
+            },
             child: Stack(
               children: [
                 _buildCanvas(context),

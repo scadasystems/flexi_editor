@@ -5,8 +5,8 @@ class VectorUtils {
     return point2 - point1;
   }
 
-  static Offset getPerpendicularVector(Offset point11, Offset point2) {
-    return Offset((point2.dy - point11.dy), -(point2.dx - point11.dx));
+  static Offset getPerpendicularVector(Offset point1, Offset point2) {
+    return Offset((point2.dy - point1.dy), -(point2.dx - point1.dx));
   }
 
   static Offset getPerpendicularVectorToVector(
@@ -40,17 +40,17 @@ class VectorUtils {
         normalizeVector(getDirectionVector(point1, point2)) * shortening;
   }
 
-  static Path getRectAroundLine(Offset point1, Offset point2, rectWidth) {
+  static Path getRectAroundLine(Offset point1, Offset point2, double rectWidth) {
     Path path = Path();
-    Offset pnsv = VectorUtils.normalizeVector(
+    Offset perpendicularNormalizedVector = VectorUtils.normalizeVector(
           VectorUtils.getPerpendicularVector(point1, point2),
         ) *
         rectWidth;
 
-    path.moveTo(point1.dx + pnsv.dx, point1.dy + pnsv.dy);
-    path.lineTo(point2.dx + pnsv.dx, point2.dy + pnsv.dy);
-    path.lineTo(point2.dx - pnsv.dx, point2.dy - pnsv.dy);
-    path.lineTo(point1.dx - pnsv.dx, point1.dy - pnsv.dy);
+    path.moveTo(point1.dx + perpendicularNormalizedVector.dx, point1.dy + perpendicularNormalizedVector.dy);
+    path.lineTo(point2.dx + perpendicularNormalizedVector.dx, point2.dy + perpendicularNormalizedVector.dy);
+    path.lineTo(point2.dx - perpendicularNormalizedVector.dx, point2.dy - perpendicularNormalizedVector.dy);
+    path.lineTo(point1.dx - perpendicularNormalizedVector.dx, point1.dy - perpendicularNormalizedVector.dy);
     path.close();
 
     return path;

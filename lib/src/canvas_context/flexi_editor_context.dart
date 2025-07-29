@@ -3,7 +3,6 @@ import 'package:flexi_editor/src/abstraction_layer/state/state_reader.dart';
 import 'package:flexi_editor/src/abstraction_layer/state/state_writer.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
-import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
 
 class FlexiEditorContext {
   final CanvasModel _canvasModel;

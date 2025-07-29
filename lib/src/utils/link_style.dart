@@ -18,6 +18,14 @@ enum LineType {
   dotted,
 }
 
+class LinkStyleConstants {
+  static const double defaultArrowSize = 5.0;
+  static const double defaultLineWidth = 1.0;
+  static const double defaultDashLength = 16.0;
+  static const double defaultDashSpacing = 16.0;
+  static const double dottedLineSpacingMultiplier = 5.0;
+}
+
 class LinkStyle {
   LineType lineType;
   ArrowType arrowType;
@@ -31,9 +39,9 @@ class LinkStyle {
     this.lineType = LineType.solid,
     this.arrowType = ArrowType.none,
     this.backArrowType = ArrowType.none,
-    this.arrowSize = 5,
-    this.backArrowSize = 5,
-    this.lineWidth = 1,
+    this.arrowSize = LinkStyleConstants.defaultArrowSize,
+    this.backArrowSize = LinkStyleConstants.defaultArrowSize,
+    this.lineWidth = LinkStyleConstants.defaultLineWidth,
     this.color = Colors.black,
   })  : assert(lineWidth > 0),
         assert(arrowSize > 0);
@@ -66,14 +74,20 @@ class LinkStyle {
       case LineType.solid:
         return getSolidLinePath(point1, point2);
       case LineType.dashed:
-        return getDashedLinePath(point1, point2, scale, 16, 16);
+        return getDashedLinePath(
+          point1, 
+          point2, 
+          scale, 
+          LinkStyleConstants.defaultDashLength, 
+          LinkStyleConstants.defaultDashSpacing
+        );
       case LineType.dotted:
         return getDashedLinePath(
           point1,
           point2,
           scale,
           lineWidth,
-          lineWidth * 5,
+          lineWidth * LinkStyleConstants.dottedLineSpacingMultiplier,
         );
     }
   }
@@ -246,6 +260,6 @@ class LinkStyle {
         'arrow_size': arrowSize,
         'back_arrow_size': backArrowSize,
         'line_width': lineWidth,
-        'color': color.value,
+        'color': color.toARGB32(),
       };
 }

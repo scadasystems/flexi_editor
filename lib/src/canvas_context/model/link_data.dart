@@ -2,6 +2,10 @@ import 'package:flexi_editor/src/utils/link_style.dart';
 import 'package:flexi_editor/src/utils/vector_utils.dart';
 import 'package:flutter/material.dart';
 
+class LinkConstants {
+  static const double hitTestTolerance = 5.0;
+}
+
 class LinkData<T> with ChangeNotifier {
   final String id;
   final String sourceComponentId;
@@ -85,7 +89,7 @@ class LinkData<T> with ChangeNotifier {
       Path rect = VectorUtils.getRectAroundLine(
         point1,
         point2,
-        canvasScale * (linkStyle.lineWidth + 5),
+        canvasScale * (linkStyle.lineWidth + LinkConstants.hitTestTolerance),
       );
 
       if (rect.contains(position)) {
@@ -97,7 +101,7 @@ class LinkData<T> with ChangeNotifier {
 
   void setOpacity(double opacity) {
     assert(opacity >= 0 && opacity <= 1);
-    linkStyle.color = linkStyle.color.withOpacity(opacity);
+    linkStyle.color = linkStyle.color.withValues(alpha: opacity);
     notifyListeners();
   }
 
@@ -108,7 +112,9 @@ class LinkData<T> with ChangeNotifier {
         sourceComponentId = json['source_component_id'],
         targetComponentId = json['target_component_id'],
         linkStyle = LinkStyle.fromJson(json['link_style']),
-        linkPoints = (json['link_points'] as List).map((point) => Offset(point['x'], point['y'])).toList(),
+        linkPoints = (json['link_points'] as List)
+            .map((point) => Offset(point['x'], point['y']))
+            .toList(),
         data = decodeCustomLinkData?.call(json['dynamic_data'] ?? {});
 
   Map<String, dynamic> toJson() => {
@@ -116,7 +122,9 @@ class LinkData<T> with ChangeNotifier {
         'source_component_id': sourceComponentId,
         'target_component_id': targetComponentId,
         'link_style': linkStyle,
-        'link_points': linkPoints.map((point) => {'x': point.dx.round(), 'y': point.dy.round()}).toList(),
+        'link_points': linkPoints
+            .map((point) => {'x': point.dx.round(), 'y': point.dy.round()})
+            .toList(),
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
       };
 }
