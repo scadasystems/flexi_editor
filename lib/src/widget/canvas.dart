@@ -408,85 +408,24 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
               }
             },
             onPointerSignal: (event) {
-              // 트랙패드 두 손가락 스크롤(드래그) 감지
+              // PointerScrollEvent는 CanvasControlPolicy의 onCanvasPointerSignal에서 직접 처리
               if (event is PointerScrollEvent) {
-                if (!_isPinchActive) {
-                  _isPinchActive = true;
-                  debugPrint('🤏 트랙패드 두 손가락 드래그 시작');
-                }
+                // 입력 장치 타입에 따라 다른 로그 출력
+                // final deviceType = event.kind;
+                // if (deviceType == PointerDeviceKind.trackpad) {
+                //   debugPrint('🤏 트랙패드 두 손가락 드래그 (캔버스 이동): ${event.scrollDelta}');
+                // } else if (deviceType == PointerDeviceKind.mouse) {
+                //   final zoomDirection = event.scrollDelta.dy < 0 ? '줌 인' : '줌 아웃';
+                //   debugPrint('🖱️ 마우스 스크롤 ($zoomDirection): ${event.scrollDelta}');
+                // } else {
+                //   debugPrint('📱 기타 장치 스크롤 ($deviceType): ${event.scrollDelta}');
+                // }
 
-                final scrollMagnitude = event.scrollDelta.distance;
-                final scrollDirection =
-                    event.scrollDelta.dx.abs() > event.scrollDelta.dy.abs()
-                        ? '수평'
-                        : '수직';
-                debugPrint(
-                    '🤏 트랙패드 두 손가락 드래그 - 방향: $scrollDirection, 세기: ${scrollMagnitude.toStringAsFixed(1)}');
-
-                // 캔버스 이동 정보 로그
-                final canvasState = context.read<CanvasState>();
-                final newPosition = canvasState.position - event.scrollDelta;
-                // debugPrint('🔄 캔버스 이동: ${canvasState.position} → $newPosition');
-
-                // 트랙패드 드래그는 onCanvasPointerSignal 호출하지 않음
+                widget.policy.onCanvasPointerSignal(event);
                 return;
               }
               // Scale 이벤트는 pinch/zoom 으로 처리
               else if (event.runtimeType.toString().contains('Scale')) {
-                /*
-                // 트랙패드 pinch 시작 시 상태 활성화
-                if (!_isPinchActive) {
-                  _isPinchActive = true;
-                  debugPrint('🤏 트랙패드 Pinch 시작');
-                }
-
-                // 이벤트에서 스케일 정보를 추출 시도
-                try {
-                  // 속성 접근을 위해 dynamic으로 캐스팅
-                  final dynamic scaleEvent = event;
-
-                  // 스케일 이벤트의 일반적인 속성명들을 시도
-                  dynamic scaleValue;
-                  dynamic deltaValue;
-                  dynamic focusPoint;
-
-                  try {
-                    scaleValue = scaleEvent.scale;
-                  } catch (_) {}
-                  try {
-                    deltaValue = scaleEvent.scaleDelta;
-                  } catch (_) {}
-                  try {
-                    deltaValue ??= scaleEvent.delta;
-                  } catch (_) {}
-                  try {
-                    focusPoint = scaleEvent.focalPoint;
-                  } catch (_) {}
-                  try {
-                    focusPoint ??= scaleEvent.localPosition;
-                  } catch (_) {}
-
-                  if (scaleValue != null) {
-                    final direction = scaleValue > 1.0
-                        ? 'Zoom In'
-                        : scaleValue < 1.0
-                            ? 'Zoom Out'
-                            : 'No Change';
-                    if (focusPoint != null) {
-                      debugPrint('🤏 Trackpad Pinch - Focus: $focusPoint');
-                    }
-                  } else if (deltaValue != null) {
-                    debugPrint('🤏 Trackpad Pinch - Delta: $deltaValue');
-                  } else {
-                    // 대안: 전체 이벤트 정보만 표시
-                    debugPrint('🤏 Trackpad Pinch - Event: $event');
-                  }
-                } catch (e) {
-                  debugPrint('🚫 Could not extract scale info: $e');
-                  debugPrint('🤏 Raw Trackpad Event: $event');
-                }
-                */
-
                 // Scale 이벤트를 정책으로 전달 (onCanvasPointerSignal에서 처리)
                 widget.policy.onCanvasPointerSignal(event);
                 return;
