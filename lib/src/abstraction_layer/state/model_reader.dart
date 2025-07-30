@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
-import 'package:flexi_editor/src/canvas_context/model/component_data.dart';
+import 'package:flexi_editor/src/canvas_context/model/component.dart';
 import 'package:flexi_editor/src/canvas_context/model/link_data.dart';
 import 'package:flutter/material.dart';
 
@@ -17,12 +17,12 @@ class CanvasModelReader {
     return canvasModel.componentExists(id);
   }
 
-  ComponentData getComponent(String id) {
+  Component getComponent(String id) {
     assert(componentExist(id), 'model does not contain this component id: $id');
     return canvasModel.getComponent(id);
   }
 
-  HashMap<String, ComponentData> getAllComponents() {
+  HashMap<String, Component> getAllComponents() {
     return canvasModel.getAllComponents();
   }
 

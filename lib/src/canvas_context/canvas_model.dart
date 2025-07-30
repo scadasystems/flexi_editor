@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 
 class CanvasModel with ChangeNotifier {
   final Uuid _uuid = const Uuid();
-  HashMap<String, ComponentData> components = HashMap();
+  HashMap<String, Component> components = HashMap();
   HashMap<String, LinkData> links = HashMap();
   PolicySet policySet;
 
@@ -16,7 +16,8 @@ class CanvasModel with ChangeNotifier {
   FlexiData getFlexi() {
     for (var component in components.values) {
       if (!_hasToJsonMethodAtComponent(component)) {
-        throw ArgumentError('ComponentData.data does not have a toJson() method.');
+        throw ArgumentError(
+            'ComponentData.data does not have a toJson() method.');
       }
     }
 
@@ -32,7 +33,7 @@ class CanvasModel with ChangeNotifier {
     );
   }
 
-  bool _hasToJsonMethodAtComponent(ComponentData component) {
+  bool _hasToJsonMethodAtComponent(Component component) {
     try {
       component.data.toJson();
       return true;
@@ -58,11 +59,11 @@ class CanvasModel with ChangeNotifier {
     return components.containsKey(id);
   }
 
-  ComponentData getComponent(String id) {
+  Component getComponent(String id) {
     return components[id]!;
   }
 
-  HashMap<String, ComponentData> getAllComponents() {
+  HashMap<String, Component> getAllComponents() {
     return components;
   }
 
@@ -78,7 +79,7 @@ class CanvasModel with ChangeNotifier {
     return links;
   }
 
-  String addComponent(ComponentData componentData) {
+  String addComponent(Component componentData) {
     components[componentData.id] = componentData;
     notifyListeners();
     return componentData.id;
@@ -193,8 +194,10 @@ class CanvasModel with ChangeNotifier {
       sourceComponentId: sourceComponentId,
       targetComponentId: targetComponentId,
       linkPoints: [
-        sourceComponent.position + sourceComponent.getPointOnComponent(sourceLinkAlignment),
-        targetComponent.position + targetComponent.getPointOnComponent(targetLinkAlignment),
+        sourceComponent.position +
+            sourceComponent.getPointOnComponent(sourceLinkAlignment),
+        targetComponent.position +
+            targetComponent.getPointOnComponent(targetLinkAlignment),
       ],
       linkStyle: linkStyle ?? LinkStyle(),
       data: data,
@@ -205,12 +208,13 @@ class CanvasModel with ChangeNotifier {
   }
 
   void updateLinks(String componentId) {
-    assert(componentExists(componentId), 'model does not contain this component id: $componentId');
+    assert(componentExists(componentId),
+        'model does not contain this component id: $componentId');
     var component = getComponent(componentId);
     for (final connection in component.connections) {
       var link = getLink(connection.connectionId);
 
-      ComponentData sourceComponent = component;
+      Component sourceComponent = component;
       var targetComponent = getComponent(connection.otherComponentId);
 
       if (connection is ConnectionOut) {
@@ -223,17 +227,19 @@ class CanvasModel with ChangeNotifier {
         throw ArgumentError('Invalid port connection.');
       }
 
-      Alignment firstLinkAlignment = _getLinkEndpointAlignment(sourceComponent, targetComponent, link, 1);
-      Alignment secondLinkAlignment =
-          _getLinkEndpointAlignment(targetComponent, sourceComponent, link, link.linkPoints.length - 2);
+      Alignment firstLinkAlignment =
+          _getLinkEndpointAlignment(sourceComponent, targetComponent, link, 1);
+      Alignment secondLinkAlignment = _getLinkEndpointAlignment(
+          targetComponent, sourceComponent, link, link.linkPoints.length - 2);
 
-      _setLinkEndpoints(link, sourceComponent, targetComponent, firstLinkAlignment, secondLinkAlignment);
+      _setLinkEndpoints(link, sourceComponent, targetComponent,
+          firstLinkAlignment, secondLinkAlignment);
     }
   }
 
   Alignment _getLinkEndpointAlignment(
-    ComponentData component1,
-    ComponentData component2,
+    Component component1,
+    Component component2,
     LinkData link,
     int linkPointIndex,
   ) {
@@ -252,8 +258,8 @@ class CanvasModel with ChangeNotifier {
 
   void _setLinkEndpoints(
     LinkData link,
-    ComponentData component1,
-    ComponentData component2,
+    Component component1,
+    Component component2,
     Alignment alignment1,
     Alignment alignment2,
   ) {

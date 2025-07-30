@@ -23,7 +23,7 @@ export 'src/abstraction_layer/state/model_reader.dart';
 export 'src/abstraction_layer/state/model_writer.dart';
 export 'src/canvas_context/canvas_state.dart';
 export 'src/canvas_context/flexi_editor_context.dart';
-export 'src/canvas_context/model/component_data.dart';
+export 'src/canvas_context/model/component.dart';
 export 'src/canvas_context/model/connection.dart';
 export 'src/canvas_context/model/link_data.dart';
 export 'src/utils/link_style.dart';

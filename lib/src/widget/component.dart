@@ -4,19 +4,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class Component extends StatefulWidget {
+class ComponentWidget extends StatefulWidget {
   final PolicySet policy;
 
-  const Component({
+  const ComponentWidget({
     super.key,
     required this.policy,
   });
 
   @override
-  State<Component> createState() => _ComponentState();
+  State<ComponentWidget> createState() => _ComponentWidgetState();
 }
 
-class _ComponentState extends State<Component> {
+class _ComponentWidgetState extends State<ComponentWidget> {
   late Widget? _componentBody;
   late Map<String, dynamic> _lastDynamicData;
   late Offset _lastPosition;
@@ -27,7 +27,7 @@ class _ComponentState extends State<Component> {
   @override
   void initState() {
     super.initState();
-    final componentData = Provider.of<ComponentData>(context, listen: false);
+    final componentData = Provider.of<Component>(context, listen: false);
     _componentBody = widget.policy.showComponentBody(componentData);
     _lastDynamicData = Map.from(componentData.toJson()['dynamic_data']);
     _lastPosition = componentData.position;
@@ -40,7 +40,7 @@ class _ComponentState extends State<Component> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ComponentData>(
+    return Consumer<Component>(
       builder: (context, component, _) {
         final currentDynamicData = component.toJson()['dynamic_data'];
 

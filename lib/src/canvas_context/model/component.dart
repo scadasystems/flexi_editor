@@ -3,7 +3,7 @@ import 'package:flexi_editor/src/canvas_context/model/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-class ComponentData<T> with ChangeNotifier {
+class Component<T> with ChangeNotifier {
   final String id;
   final String type;
   String? subtype;
@@ -16,7 +16,7 @@ class ComponentData<T> with ChangeNotifier {
   final List<Connection> connections;
   final T? data;
 
-  ComponentData({
+  Component({
     String? id,
     required this.type,
     this.subtype,
@@ -93,7 +93,7 @@ class ComponentData<T> with ChangeNotifier {
     this.subtype = subtype;
   }
 
-  ComponentData.fromJson(
+  Component.fromJson(
     Map<String, dynamic> json, {
     Function(Map<String, dynamic> json)? decodeCustomComponentData,
   })  : id = json['id'],
@@ -107,7 +107,9 @@ class ComponentData<T> with ChangeNotifier {
             ? (json['children_ids'] as List).map((id) => id.toString()).toList()
             : [],
         connections = json['connections'] != null
-            ? (json['connections'] as List).map((connectionJson) => Connection.fromJson(connectionJson)).toList()
+            ? (json['connections'] as List)
+                .map((connectionJson) => Connection.fromJson(connectionJson))
+                .toList()
             : [],
         data = decodeCustomComponentData?.call(json['dynamic_data'] ?? {});
 
@@ -124,7 +126,7 @@ class ComponentData<T> with ChangeNotifier {
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
       };
 
-  ComponentData<T> copyWith({
+  Component<T> copyWith({
     String? id,
     Offset? position,
     Size? size,
@@ -134,7 +136,7 @@ class ComponentData<T> with ChangeNotifier {
     int? zOrder,
     T? data,
   }) {
-    final component = ComponentData<T>(
+    final component = Component<T>(
       id: id ?? this.id,
       position: position ?? this.position,
       size: size ?? this.size,

@@ -1,7 +1,7 @@
 import 'package:flexi_editor/flexi_editor.dart';
 
 class FlexiData {
-  final List<ComponentData> components;
+  final List<Component> components;
   final List<LinkData> links;
 
   FlexiData({
@@ -14,7 +14,7 @@ class FlexiData {
     Function(Map<String, dynamic> json)? decodeCustomComponentData,
     Function(Map<String, dynamic> json)? decodeCustomLinkData,
   })  : components = (json['components'] as List).map((componentJson) {
-          return ComponentData.fromJson(
+          return Component.fromJson(
             componentJson,
             decodeCustomComponentData: decodeCustomComponentData,
           );

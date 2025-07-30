@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
-import 'package:flexi_editor/src/canvas_context/model/component_data.dart';
+import 'package:flexi_editor/src/canvas_context/model/component.dart';
 import 'package:flexi_editor/src/canvas_context/model/flexi_data.dart';
 import 'package:flexi_editor/src/utils/link_style.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +18,7 @@ class CanvasModelWriter extends ModelWriter
     with ComponentWriter, LinkWriter, ConnectionWriter {
   CanvasModelWriter(super.canvasModel, super.canvasState);
 
-  String addComponent(ComponentData componentData) {
+  String addComponent(Component componentData) {
     return _canvasModel.addComponent(componentData);
   }
 

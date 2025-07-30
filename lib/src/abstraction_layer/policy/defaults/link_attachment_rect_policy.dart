@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 mixin LinkAttachmentRectPolicy implements LinkAttachmentPolicy {
   @override
   Alignment getLinkEndpointAlignment(
-    ComponentData componentData,
+    Component componentData,
     Offset targetPoint,
   ) {
     Offset pointPosition = targetPoint -

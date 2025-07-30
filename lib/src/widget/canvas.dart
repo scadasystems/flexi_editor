@@ -40,7 +40,7 @@ class FlexiEditorCanvas extends StatefulWidget {
 class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     with TickerProviderStateMixin {
   late PolicySet withControlPolicy;
-  List<ComponentData> _cachedZOrderedComponents = [];
+  List<Component> _cachedZOrderedComponents = [];
   List<Widget> _cachedComponentWidgets = [];
   List<Widget> _cachedLinkWidgets = [];
 
@@ -81,9 +81,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
       _cachedZOrderedComponents = currentComponents;
       _cachedComponentWidgets = currentComponents
           .map(
-            (componentData) => ChangeNotifierProvider<ComponentData>.value(
+            (componentData) => ChangeNotifierProvider<Component>.value(
               value: componentData,
-              child: Component(
+              child: ComponentWidget(
                 policy: widget.policy,
               ),
             ),
@@ -94,8 +94,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     return _cachedComponentWidgets;
   }
 
-  bool _areComponentListsEqual(
-      List<ComponentData> list1, List<ComponentData> list2) {
+  bool _areComponentListsEqual(List<Component> list1, List<Component> list2) {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
       if (list1[i] != list2[i]) return false;
@@ -120,11 +119,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((ComponentData componentData) {
+    return canvasModel.components.values.map((Component componentData) {
       return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
-          return Consumer<ComponentData>(
+          return Consumer<Component>(
             builder: (context, value, child) {
               return widget.policy.showCustomWidgetWithComponentDataUnder(
                   context, componentData);
@@ -136,11 +135,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   List<Widget> buildComponentOverWidget(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((ComponentData componentData) {
+    return canvasModel.components.values.map((Component componentData) {
       return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
-          return Consumer<ComponentData>(
+          return Consumer<Component>(
             builder: (context, value, child) {
               return widget.policy.buildComponentOverWidget(context, value);
             },
@@ -155,11 +154,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   List<Widget> buildLinkOverWidget(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((ComponentData componentData) {
+    return canvasModel.components.values.map((Component componentData) {
       return ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
-          return Consumer<ComponentData>(
+          return Consumer<Component>(
             builder: (context, data, child) {
               return widget.policy.buildLinkOverWidget(context, data);
             },
