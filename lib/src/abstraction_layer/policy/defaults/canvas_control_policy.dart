@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 mixin CanvasControlPolicy on BasePolicySet {
   AnimationController? _animationController;
@@ -96,10 +97,15 @@ mixin CanvasControlPolicy on BasePolicySet {
       final deviceType = event.kind;
 
       if (deviceType == PointerDeviceKind.trackpad) {
-        // 트랙패드 두 손가락 스크롤 → 캔버스 이동
-        Offset panDelta = event.scrollDelta;
-        canvasWriter.state.updatePosition(-panDelta);
-        canvasWriter.state.updateCanvas();
+        // 트랙패드에서 pinch zoom을 위한 특별 처리
+        if (_isTrackpadPinchGesture()) {
+          _handleTrackpadPinch(event);
+        } else {
+          // 트랙패드 두 손가락 스크롤 → 캔버스 이동
+          Offset panDelta = event.scrollDelta;
+          canvasWriter.state.updatePosition(-panDelta);
+          canvasWriter.state.updateCanvas();
+        }
       } else if (deviceType == PointerDeviceKind.mouse) {
         // 마우스 스크롤 → 부드러운 줌 기능
         _handleMouseScrollZoom(event);
@@ -112,53 +118,111 @@ mixin CanvasControlPolicy on BasePolicySet {
       return;
     }
 
-    print('event는 Scale? ${event.runtimeType.toString().contains('Scale')}');
+    // 다른 포인터 시그널 이벤트들 처리
+    _tryHandleScaleEvent(event);
+  }
 
-    // 트랙패드 Scale 이벤트 처리 (Pinch Zoom)
-    if (event.runtimeType.toString().contains('Scale')) {
+  bool _isTrackpadPinchGesture() {
+    // 트랙패드 pinch는 웹에서 Ctrl+Scroll로 감지됨
+    if (HardwareKeyboard.instance.isControlPressed) {
+      return true;
+    } else {
+      return false;
+    }
+    // try {
+
+    //   if (nativeEvent.ctrlKey == true) {
+    //     return true;
+    //   }
+    // } catch (_) {}
+
+    // 다른 조건들은 제거 - 일반 스크롤과 구분하기 어려움
+    // return false;
+  }
+
+  void _handleTrackpadPinch(PointerScrollEvent event) {
+    const double sensitivity = 0.01;
+    double zoomFactor = 1.0;
+
+    // scrollDelta.dy를 기반으로 zoom 방향 결정
+    if (event.scrollDelta.dy < 0) {
+      zoomFactor = 1.0 + sensitivity;
+    } else if (event.scrollDelta.dy > 0) {
+      zoomFactor = 1.0 - sensitivity;
+    }
+
+    if (zoomFactor == 1.0) return;
+
+    double currentScale = canvasReader.state.scale;
+    double newScale = _clampScale(currentScale * zoomFactor);
+
+    if (newScale != currentScale) {
+      Offset currentPosition = canvasReader.state.position;
+      Offset focalPoint = event.localPosition;
+
+      var relativeFocalPoint = (focalPoint - currentPosition);
+      var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
+
+      Offset newPosition =
+          currentPosition + (relativeFocalPoint - focalPointScaled);
+
+      canvasWriter.state.setScale(newScale);
+      canvasWriter.state.setPosition(newPosition);
+      canvasWriter.state.updateCanvas();
+    }
+  }
+
+  void _tryHandleScaleEvent(PointerSignalEvent event) {
+    try {
+      final scaleValue = _extractScaleValue(event);
+      final focalPoint = _extractFocalPoint(event);
+
+      if (scaleValue != null && scaleValue != 1.0) {
+        _handleScaleGesture(scaleValue, focalPoint ?? event.localPosition);
+      }
+    } catch (e) {
+      // Scale 이벤트가 아니거나 처리할 수 없는 경우 무시
+      debugPrint('Scale event handling failed: $e');
+    }
+  }
+
+  dynamic _extractScaleValue(dynamic event) {
+    try {
+      return event.scale;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Offset? _extractFocalPoint(dynamic event) {
+    try {
+      return event.focalPoint ?? event.localPosition;
+    } catch (_) {
       try {
-        // 이벤트에서 스케일 정보 추출
-        final dynamic scaleEvent = event;
-        dynamic scaleValue;
-
-        try {
-          scaleValue = scaleEvent.scale;
-        } catch (_) {}
-
-        if (scaleValue != null && scaleValue != 1.0) {
-          double scaleChange = scaleValue;
-          scaleChange =
-              keepScaleInBounds(scaleChange, canvasReader.state.scale);
-
-          if (scaleChange == 0.0) return;
-
-          double previousScale = canvasReader.state.scale;
-          Offset previousPosition = canvasReader.state.position;
-
-          canvasWriter.state.updateScale(scaleChange);
-
-          // 포커스 포인트 계산 (트랙패드 pinch 중심점)
-          Offset focalPoint;
-          try {
-            focalPoint = scaleEvent.focalPoint ??
-                scaleEvent.localPosition ??
-                event.localPosition;
-          } catch (_) {
-            focalPoint = event.localPosition;
-          }
-
-          var relativeFocalPoint = (focalPoint - previousPosition);
-          var focalPointScaled =
-              relativeFocalPoint * (canvasReader.state.scale / previousScale);
-
-          canvasWriter.state
-              .updatePosition(relativeFocalPoint - focalPointScaled);
-          canvasWriter.state.updateCanvas();
-        }
-      } catch (e) {
-        // Scale 이벤트 처리 실패 시 무시
+        return event.localPosition;
+      } catch (_) {
+        return null;
       }
     }
+  }
+
+  void _handleScaleGesture(double scaleValue, Offset focalPoint) {
+    double scaleChange =
+        keepScaleInBounds(scaleValue, canvasReader.state.scale);
+
+    if (scaleChange == 0.0) return;
+
+    double previousScale = canvasReader.state.scale;
+    Offset previousPosition = canvasReader.state.position;
+
+    canvasWriter.state.updateScale(scaleChange);
+
+    var relativeFocalPoint = (focalPoint - previousPosition);
+    var focalPointScaled =
+        relativeFocalPoint * (canvasReader.state.scale / previousScale);
+
+    canvasWriter.state.updatePosition(relativeFocalPoint - focalPointScaled);
+    canvasWriter.state.updateCanvas();
   }
 
   void _handleMouseScrollZoom(PointerScrollEvent event) {
