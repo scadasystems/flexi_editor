@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
@@ -84,7 +83,8 @@ mixin CanvasControlPolicy on BasePolicySet {
       canvasWriter.state.setScale(transformScale * _baseScale);
     } else {
       // 기존 pinch/pan 로직
-      canvasWriter.state.setPosition((_basePosition * transformScale) + transformPosition);
+      canvasWriter.state
+          .setPosition((_basePosition * transformScale) + transformPosition);
       canvasWriter.state.setScale(transformScale * _baseScale);
     }
     canUpdateCanvasModel = false;
@@ -94,7 +94,7 @@ mixin CanvasControlPolicy on BasePolicySet {
     // PointerScrollEvent 처리 - 장치 타입에 따라 다르게 처리
     if (event is PointerScrollEvent) {
       final deviceType = event.kind;
-      
+
       if (deviceType == PointerDeviceKind.trackpad) {
         // 트랙패드 두 손가락 스크롤 → 캔버스 이동
         Offset panDelta = event.scrollDelta;
@@ -112,19 +112,24 @@ mixin CanvasControlPolicy on BasePolicySet {
       return;
     }
 
+    print('event는 Scale? ${event.runtimeType.toString().contains('Scale')}');
+
     // 트랙패드 Scale 이벤트 처리 (Pinch Zoom)
     if (event.runtimeType.toString().contains('Scale')) {
       try {
         // 이벤트에서 스케일 정보 추출
         final dynamic scaleEvent = event;
         dynamic scaleValue;
-        
-        try { scaleValue = scaleEvent.scale; } catch (_) {}
-        
+
+        try {
+          scaleValue = scaleEvent.scale;
+        } catch (_) {}
+
         if (scaleValue != null && scaleValue != 1.0) {
           double scaleChange = scaleValue;
-          scaleChange = keepScaleInBounds(scaleChange, canvasReader.state.scale);
-          
+          scaleChange =
+              keepScaleInBounds(scaleChange, canvasReader.state.scale);
+
           if (scaleChange == 0.0) return;
 
           double previousScale = canvasReader.state.scale;
@@ -134,16 +139,20 @@ mixin CanvasControlPolicy on BasePolicySet {
 
           // 포커스 포인트 계산 (트랙패드 pinch 중심점)
           Offset focalPoint;
-          try { 
-            focalPoint = scaleEvent.focalPoint ?? scaleEvent.localPosition ?? event.localPosition;
+          try {
+            focalPoint = scaleEvent.focalPoint ??
+                scaleEvent.localPosition ??
+                event.localPosition;
           } catch (_) {
             focalPoint = event.localPosition;
           }
-          
-          var relativeFocalPoint = (focalPoint - previousPosition);
-          var focalPointScaled = relativeFocalPoint * (canvasReader.state.scale / previousScale);
 
-          canvasWriter.state.updatePosition(relativeFocalPoint - focalPointScaled);
+          var relativeFocalPoint = (focalPoint - previousPosition);
+          var focalPointScaled =
+              relativeFocalPoint * (canvasReader.state.scale / previousScale);
+
+          canvasWriter.state
+              .updatePosition(relativeFocalPoint - focalPointScaled);
           canvasWriter.state.updateCanvas();
         }
       } catch (e) {
@@ -160,45 +169,46 @@ mixin CanvasControlPolicy on BasePolicySet {
       canUpdateCanvasModel = true;
       _isMouseScrolling = true;
     }
-    
+
     const double zoomSensitivity = 0.08;
     double zoomFactor = 1.0;
-    
+
     // 스크롤 방향에 따라 줌 인/아웃
     if (event.scrollDelta.dy < 0) {
       // 위로 스크롤 = 줌 인
       zoomFactor = 1.0 + zoomSensitivity;
     } else if (event.scrollDelta.dy > 0) {
-      // 아래로 스크롤 = 줌 아웃  
+      // 아래로 스크롤 = 줌 아웃
       zoomFactor = 1.0 - zoomSensitivity;
     }
-    
+
     if (zoomFactor == 1.0) return;
-    
+
     // 현재 캔버스 상태
     double currentScale = canvasReader.state.scale;
     Offset currentPosition = canvasReader.state.position;
-    
+
     // 새로운 스케일 계산
     double newScale = _clampScale(currentScale * zoomFactor);
-    
+
     if (newScale != currentScale) {
       // 마우스 위치를 중심으로 줌
       Offset focalPoint = event.localPosition;
       var relativeFocalPoint = (focalPoint - currentPosition);
       var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
-      
-      Offset newPosition = currentPosition + (relativeFocalPoint - focalPointScaled);
-      
+
+      Offset newPosition =
+          currentPosition + (relativeFocalPoint - focalPointScaled);
+
       // 캔버스 상태를 즉시 업데이트
       canvasWriter.state.setScale(newScale);
       canvasWriter.state.setPosition(newPosition);
       canvasWriter.state.updateCanvas();
-      
+
       // Transform 값도 업데이트 (애니메이션용)
       transformScale = newScale / _baseScale;
       transformPosition = newPosition - _basePosition;
-      
+
       // 애니메이션 시작
       if (_animationController?.isAnimating == false) {
         _animationController?.repeat();
@@ -207,11 +217,11 @@ mixin CanvasControlPolicy on BasePolicySet {
         _animationController?.reset();
       }
     }
-    
+
     // 스크롤 종료를 위한 타이머 설정
     _resetMouseScrollTimer();
   }
-  
+
   void _resetMouseScrollTimer() {
     _mouseScrollTimer?.cancel();
     _mouseScrollTimer = Timer(const Duration(milliseconds: 150), () {
@@ -236,7 +246,8 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   double _clampScale(double scale) {
-    return scale.clamp(canvasReader.state.minScale, canvasReader.state.maxScale);
+    return scale.clamp(
+        canvasReader.state.minScale, canvasReader.state.maxScale);
   }
 
   double keepScaleInBounds(double scale, double canvasScale) {
