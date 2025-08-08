@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +14,6 @@ mixin CanvasControlPolicy on BasePolicySet {
   double transformScale = 1.0;
 
   bool canUpdateCanvasModel = false;
-  Timer? _mouseScrollTimer;
-  bool _isMouseScrolling = false;
 
   AnimationController? getAnimationController() {
     return _animationController;
@@ -29,7 +25,6 @@ mixin CanvasControlPolicy on BasePolicySet {
 
   void disposeAnimationController() {
     _animationController?.dispose();
-    _mouseScrollTimer?.cancel();
   }
 
   void onCanvasScaleStart(ScaleStartDetails details) {
@@ -78,16 +73,9 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void _updateCanvasModelWithLastValues() {
-    if (_isMouseScrolling) {
-      // 마우스 스크롤 줌의 경우 이미 실시간으로 위치가 업데이트되었으므로
-      // 스케일만 업데이트
-      canvasWriter.state.setScale(transformScale * _baseScale);
-    } else {
-      // 기존 pinch/pan 로직
-      canvasWriter.state
-          .setPosition((_basePosition * transformScale) + transformPosition);
-      canvasWriter.state.setScale(transformScale * _baseScale);
-    }
+    canvasWriter.state
+        .setPosition((_basePosition * transformScale) + transformPosition);
+    canvasWriter.state.setScale(transformScale * _baseScale);
     canUpdateCanvasModel = false;
   }
 
@@ -129,15 +117,6 @@ mixin CanvasControlPolicy on BasePolicySet {
     } else {
       return false;
     }
-    // try {
-
-    //   if (nativeEvent.ctrlKey == true) {
-    //     return true;
-    //   }
-    // } catch (_) {}
-
-    // 다른 조건들은 제거 - 일반 스크롤과 구분하기 어려움
-    // return false;
   }
 
   void _handleTrackpadPinch(PointerScrollEvent event) {
@@ -226,15 +205,7 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void _handleMouseScrollZoom(PointerScrollEvent event) {
-    // 첫 번째 스크롤에서 초기화
-    if (!canUpdateCanvasModel) {
-      _baseScale = canvasReader.state.scale;
-      _basePosition = canvasReader.state.position;
-      canUpdateCanvasModel = true;
-      _isMouseScrolling = true;
-    }
-
-    const double zoomSensitivity = 0.08;
+    const double zoomSensitivity = 0.1;
     double zoomFactor = 1.0;
 
     // 스크롤 방향에 따라 줌 인/아웃
@@ -248,65 +219,23 @@ mixin CanvasControlPolicy on BasePolicySet {
 
     if (zoomFactor == 1.0) return;
 
-    // 현재 캔버스 상태
     double currentScale = canvasReader.state.scale;
-    Offset currentPosition = canvasReader.state.position;
-
-    // 새로운 스케일 계산
     double newScale = _clampScale(currentScale * zoomFactor);
 
     if (newScale != currentScale) {
-      // 마우스 위치를 중심으로 줌
+      Offset currentPosition = canvasReader.state.position;
       Offset focalPoint = event.localPosition;
+
       var relativeFocalPoint = (focalPoint - currentPosition);
       var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
 
       Offset newPosition =
           currentPosition + (relativeFocalPoint - focalPointScaled);
 
-      // 캔버스 상태를 즉시 업데이트
       canvasWriter.state.setScale(newScale);
       canvasWriter.state.setPosition(newPosition);
       canvasWriter.state.updateCanvas();
-
-      // Transform 값도 업데이트 (애니메이션용)
-      transformScale = newScale / _baseScale;
-      transformPosition = newPosition - _basePosition;
-
-      // 애니메이션 시작
-      if (_animationController?.isAnimating == false) {
-        _animationController?.repeat();
-      }
-      if (_animationController?.isAnimating == true) {
-        _animationController?.reset();
-      }
     }
-
-    // 스크롤 종료를 위한 타이머 설정
-    _resetMouseScrollTimer();
-  }
-
-  void _resetMouseScrollTimer() {
-    _mouseScrollTimer?.cancel();
-    _mouseScrollTimer = Timer(const Duration(milliseconds: 150), () {
-      if (canUpdateCanvasModel) {
-        if (_isMouseScrolling) {
-          // 마우스 스크롤 줌 종료 - 애니메이션만 정리
-          _animationController?.reset();
-          transformPosition = const Offset(0, 0);
-          transformScale = 1.0;
-          _isMouseScrolling = false;
-        } else {
-          // 기존 pinch/pan 로직
-          _updateCanvasModelWithLastValues();
-          _animationController?.reset();
-          transformPosition = const Offset(0, 0);
-          transformScale = 1.0;
-        }
-        canUpdateCanvasModel = false;
-        canvasWriter.state.updateCanvas();
-      }
-    });
   }
 
   double _clampScale(double scale) {
