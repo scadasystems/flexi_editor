@@ -18,9 +18,9 @@ class Component<T> with ChangeNotifier {
 
   // 그룹 관련 필드
   String? groupId;
-  bool isGroup = false;
   String? groupName;
   bool groupCollapsed = false;
+  bool isGroup = false;
 
   // 그룹 관련 메서드
 
@@ -35,6 +35,10 @@ class Component<T> with ChangeNotifier {
     List<String>? childrenIds,
     List<Connection>? connections,
     this.data,
+    this.groupId,
+    this.groupName,
+    this.groupCollapsed = false,
+    this.isGroup = false,
   })  : id = id ?? const Uuid().v4(),
         childrenIds = childrenIds ?? [],
         connections = connections ?? [];
@@ -123,9 +127,9 @@ class Component<T> with ChangeNotifier {
           json['dynamic_data'] ?? {},
         ),
         groupId = json['group_id'],
-        isGroup = json['is_group'],
         groupName = json['group_name'],
-        groupCollapsed = json['group_collapsed'];
+        groupCollapsed = json['group_collapsed'],
+        isGroup = json['is_group'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -139,9 +143,9 @@ class Component<T> with ChangeNotifier {
         if (connections.isNotEmpty) 'connections': connections,
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
         if (groupId != null) 'group_id': groupId,
-        if (isGroup) 'is_group': isGroup,
         if (groupName != null) 'group_name': groupName,
         if (groupCollapsed) 'group_collapsed': groupCollapsed,
+        if (isGroup) 'is_group': isGroup,
       };
 
   Component<T> copyWith({
