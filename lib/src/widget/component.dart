@@ -76,7 +76,8 @@ class _ComponentWidgetState extends State<ComponentWidget> {
               height = _lastScale * _lastSize.height;
             }
 
-            final hasChildren = component.childrenIds.isNotEmpty;
+            final hasChildren =
+                component.type == 'screen' && component.childrenIds.isNotEmpty;
             if (!listEquals(component.childrenIds, _lastChildrenIds)) {
               _lastChildrenIds = List.from(component.childrenIds);
             }
