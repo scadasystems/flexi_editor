@@ -16,6 +16,14 @@ class Component<T> with ChangeNotifier {
   final List<Connection> connections;
   final T? data;
 
+  // 그룹 관련 필드
+  String? groupId;
+  bool isGroup = false;
+  String? groupName;
+  bool groupCollapsed = false;
+
+  // 그룹 관련 메서드
+
   Component({
     String? id,
     required this.type,
