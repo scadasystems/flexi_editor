@@ -149,6 +149,10 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     }).toList();
   }
 
+  List<Widget> buildCanvasWidgets() {
+    return widget.policy.showCustomWidgetsOnCanvasBackground(context);
+  }
+
   List<Widget> showForegroundWidgets() {
     return widget.policy.showCustomWidgetsOnCanvasForeground(context);
   }
@@ -196,6 +200,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                   child: Container(color: Colors.transparent)),
               ...showComponents(model),
               ...buildComponentOverWidget(model),
+              ...buildCanvasWidgets(),
               ...showLinks(model),
               ...showForegroundWidgets(),
               ...buildLinkOverWidget(model),
