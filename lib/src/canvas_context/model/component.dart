@@ -119,7 +119,13 @@ class Component<T> with ChangeNotifier {
                 .map((connectionJson) => Connection.fromJson(connectionJson))
                 .toList()
             : [],
-        data = decodeCustomComponentData?.call(json['dynamic_data'] ?? {});
+        data = decodeCustomComponentData?.call(
+          json['dynamic_data'] ?? {},
+        ),
+        groupId = json['group_id'],
+        isGroup = json['is_group'],
+        groupName = json['group_name'],
+        groupCollapsed = json['group_collapsed'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -132,6 +138,10 @@ class Component<T> with ChangeNotifier {
         if (childrenIds.isNotEmpty) 'children_ids': childrenIds,
         if (connections.isNotEmpty) 'connections': connections,
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
+        if (groupId != null) 'group_id': groupId,
+        if (isGroup) 'is_group': isGroup,
+        if (groupName != null) 'group_name': groupName,
+        if (groupCollapsed) 'group_collapsed': groupCollapsed,
       };
 
   Component<T> copyWith({
