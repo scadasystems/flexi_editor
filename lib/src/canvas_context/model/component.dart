@@ -20,7 +20,6 @@ class Component<T> with ChangeNotifier {
   String? groupId;
   String? groupName;
   bool groupCollapsed = false;
-  bool isGroup = false;
 
   // 그룹 관련 메서드
 
@@ -38,7 +37,6 @@ class Component<T> with ChangeNotifier {
     this.groupId,
     this.groupName,
     this.groupCollapsed = false,
-    this.isGroup = false,
   })  : id = id ?? const Uuid().v4(),
         childrenIds = childrenIds ?? [],
         connections = connections ?? [];
@@ -128,8 +126,7 @@ class Component<T> with ChangeNotifier {
         ),
         groupId = json['group_id'],
         groupName = json['group_name'],
-        groupCollapsed = json['group_collapsed'],
-        isGroup = json['is_group'];
+        groupCollapsed = json['group_collapsed'];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -145,7 +142,6 @@ class Component<T> with ChangeNotifier {
         if (groupId != null) 'group_id': groupId,
         if (groupName != null) 'group_name': groupName,
         if (groupCollapsed) 'group_collapsed': groupCollapsed,
-        if (isGroup) 'is_group': isGroup,
       };
 
   Component<T> copyWith({
