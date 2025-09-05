@@ -37,7 +37,8 @@ class CanvasEvent with ChangeNotifier {
   }
 
   void unfocus() {
-    _keyboardFocusNode.unfocus(disposition: UnfocusDisposition.previouslyFocusedChild);
+    _keyboardFocusNode.unfocus(
+        disposition: UnfocusDisposition.previouslyFocusedChild);
   }
 
   void enableKeyboardEvent() {
@@ -100,11 +101,7 @@ class CanvasEvent with ChangeNotifier {
     notifyListeners();
   }
 
-  void startTapComponent() {
-    _isTapComponent = true;
-  }
+  void startTapComponent() => _isTapComponent = true;
 
-  void endTapComponent() {
-    _isTapComponent = false;
-  }
+  void endTapComponent() => _isTapComponent = false;
 }

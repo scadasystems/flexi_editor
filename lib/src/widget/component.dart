@@ -101,15 +101,15 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                       : null,
                   onTapDown: canvasEvent.isStartDragSelection
                       ? (details) {
-                          canvasEvent.startTapComponent();
                           widget.policy
                               .onComponentTapDown(component.id, details);
+                          canvasEvent.startTapComponent();
                         }
                       : null,
                   onTapUp: canvasEvent.isStartDragSelection
                       ? (details) {
-                          canvasEvent.endTapComponent();
                           widget.policy.onComponentTapUp(component.id, details);
+                          canvasEvent.endTapComponent();
                         }
                       : null,
                   onTapCancel: canvasEvent.isStartDragSelection
