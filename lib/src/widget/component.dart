@@ -115,6 +115,10 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                   onTapCancel: canvasEvent.isStartDragSelection
                       ? () => widget.policy.onComponentTapCancel(component.id)
                       : null,
+                  onDoubleTapDown: canvasEvent.isStartDragSelection
+                      ? (details) => widget.policy
+                          .onComponentDoubleTapDown(component.id, details)
+                      : null,
                   onDoubleTap: !hasChildren
                       ? () => widget.policy.onComponentDoubleTap(component.id)
                       : null,

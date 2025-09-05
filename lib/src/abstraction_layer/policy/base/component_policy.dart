@@ -21,5 +21,7 @@ mixin ComponentPolicy on BasePolicySet {
 
   void onComponentScaleEnd(String componentId, ScaleEndDetails details) {}
 
+  void onComponentDoubleTapDown(String componentId, TapDownDetails details) {}
+
   void onComponentDoubleTap(String componentId) {}
 }
