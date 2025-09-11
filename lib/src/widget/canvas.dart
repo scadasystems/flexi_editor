@@ -81,8 +81,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
       _cachedZOrderedComponents = currentComponents;
       _cachedComponentWidgets = currentComponents
           .map(
-            (componentData) => ChangeNotifierProvider<Component>.value(
-              value: componentData,
+            (e) => ChangeNotifierProvider<Component>.value(
+              value: e,
               child: ComponentWidget(
                 policy: widget.policy,
               ),
@@ -149,14 +149,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     }).toList();
   }
 
-  List<Widget> buildCanvasWidgets() {
-    return widget.policy.showCustomWidgetsOnCanvasBackground(context);
-  }
-
-  List<Widget> showForegroundWidgets() {
-    return widget.policy.showCustomWidgetsOnCanvasForeground(context);
-  }
-
   List<Widget> buildLinkOverWidget(CanvasModel canvasModel) {
     return canvasModel.components.values.map((Component componentData) {
       return ChangeNotifierProvider.value(
@@ -170,68 +162,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         },
       );
     }).toList();
-  }
-
-  Widget canvasStack() {
-    return Consumer3<CanvasState, CanvasEvent, CanvasModel>(
-      builder: (context, state, event, model, child) {
-        return DeferredPointerHandler(
-          child: Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.expand,
-            children: [
-              GestureDetector(
-                  onTap: () {
-                    if (event.isTapComponent) return;
-                    widget.policy.onCanvasTap();
-                  },
-                  onTapDown: (details) {
-                    if (event.isTapComponent) return;
-                    widget.policy.onCanvasTapDown(details);
-                  },
-                  onTapUp: (details) {
-                    if (event.isTapComponent) return;
-                    widget.policy.onCanvasTapUp(details);
-                  },
-                  onTapCancel: () {
-                    if (event.isTapComponent) return;
-                    widget.policy.onCanvasTapCancel();
-                  },
-                  child: Container(color: Colors.transparent)),
-              ...showComponents(model),
-              ...buildComponentOverWidget(model),
-              ...buildCanvasWidgets(),
-              ...showLinks(model),
-              ...showForegroundWidgets(),
-              ...buildLinkOverWidget(model),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget canvasAnimated() {
-    final animationController =
-        (withControlPolicy as CanvasControlPolicy).getAnimationController();
-    if (animationController == null) return canvasStack();
-
-    return AnimatedBuilder(
-      animation: animationController,
-      builder: (context, child) {
-        (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
-        return Transform(
-          transform: Matrix4.identity()
-            ..translate(
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
-            )
-            ..scale((withControlPolicy as CanvasControlPolicy).transformScale),
-          child: child,
-        );
-      },
-      child: canvasStack(),
-    );
   }
 
   /// 캔버스
@@ -266,6 +196,62 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         }
       },
       child: Container(color: canvasState.color, child: canvasAnimated()),
+    );
+  }
+
+  Widget canvasAnimated() {
+    final animationController =
+        (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    if (animationController == null) return canvasStack();
+
+    return AnimatedBuilder(
+      animation: animationController,
+      builder: (context, child) {
+        (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
+        return Transform(
+          transform: Matrix4.identity()
+            ..translate(
+              (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
+              (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
+            )
+            ..scale((withControlPolicy as CanvasControlPolicy).transformScale),
+          child: child,
+        );
+      },
+      child: canvasStack(),
+    );
+  }
+
+  Widget canvasStack() {
+    return Consumer3<CanvasState, CanvasEvent, CanvasModel>(
+      builder: (context, state, event, model, child) {
+        return DeferredPointerHandler(
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.expand,
+            children: [
+              _buildCanvasClickable(event),
+              ...showComponents(model),
+              ...buildComponentOverWidget(model),
+              ...widget.policy.showCustomWidgetsOnCanvasBackground(context),
+              ...showLinks(model),
+              ...widget.policy.showCustomWidgetsOnCanvasForeground(context),
+              ...buildLinkOverWidget(model),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 캔버스 클릭 영역
+  Widget _buildCanvasClickable(CanvasEvent event) {
+    return GestureDetector(
+      onTap: event.isTapComponent ? null : widget.policy.onCanvasTap,
+      onTapDown: event.isTapComponent ? null : widget.policy.onCanvasTapDown,
+      onTapUp: event.isTapComponent ? null : widget.policy.onCanvasTapUp,
+      onTapCancel:
+          event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
     );
   }
 
