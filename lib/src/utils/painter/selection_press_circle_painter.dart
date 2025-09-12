@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class SelectionPressCirclePainter extends CustomPainter {
   final Offset position;
-  
+
   static const double _defaultCircleRadius = 20.0;
   static const double _circleAlpha = 0.5;
 

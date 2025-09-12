@@ -14,7 +14,7 @@ class Component<T> with ChangeNotifier {
   String? parentId;
   final List<String> childrenIds;
   final List<Connection> connections;
-  final T? data;
+  T? data;
 
   // 그룹 관련 필드
   String? groupId;
@@ -103,6 +103,15 @@ class Component<T> with ChangeNotifier {
     this.subtype = subtype;
   }
 
+  void updateData(T? newData) {
+    data = newData;
+    notifyListeners();
+  }
+
+  bool get isScreen => type == 'screen';
+  bool get hasParent => parentId != null;
+  bool get hasChildren => childrenIds.isNotEmpty;
+
   Component.fromJson(
     Map<String, dynamic> json, {
     Function(Map<String, dynamic> json)? decodeCustomComponentData,
@@ -153,6 +162,7 @@ class Component<T> with ChangeNotifier {
     String? parentId,
     int? zOrder,
     T? data,
+    bool replaceData = false,
   }) {
     final component = Component<T>(
       id: id ?? this.id,
@@ -162,7 +172,7 @@ class Component<T> with ChangeNotifier {
       subtype: subtype ?? this.subtype,
       zOrder: zOrder ?? this.zOrder,
       parentId: parentId ?? this.parentId,
-      data: data ?? this.data,
+      data: replaceData ? data : (data ?? this.data),
     );
 
     return component;

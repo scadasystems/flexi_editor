@@ -4,7 +4,7 @@ class DeleteIconPainter extends CustomPainter {
   final Offset location;
   final double radius;
   final Color color;
-  
+
   static const double _backgroundAlpha = 0.8;
   static const double _borderStrokeWidth = 2.0;
 
@@ -48,8 +48,8 @@ class DeleteIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant DeleteIconPainter oldDelegate) {
     return location != oldDelegate.location ||
-           radius != oldDelegate.radius ||
-           color != oldDelegate.color;
+        radius != oldDelegate.radius ||
+        color != oldDelegate.color;
   }
 
   @override

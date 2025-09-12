@@ -74,7 +74,9 @@ class ComponentHighlightPainter extends CustomPainter {
     );
 
     // 대시 효과 적용
-    if (dashWidth <= 0 || dashSpace <= 0 || type == ComponentHighlightPainterType.solid) {
+    if (dashWidth <= 0 ||
+        dashSpace <= 0 ||
+        type == ComponentHighlightPainterType.solid) {
       canvas.drawRRect(rect, paint);
     } else {
       Path path = Path()..addRRect(rect);
@@ -83,7 +85,8 @@ class ComponentHighlightPainter extends CustomPainter {
       for (var metric in pathMetrics) {
         var pathLength = 0.0;
         while (pathLength < metric.length) {
-          var extractPath = metric.extractPath(pathLength, pathLength + dashWidth);
+          var extractPath =
+              metric.extractPath(pathLength, pathLength + dashWidth);
           dashedPath.addPath(extractPath, Offset.zero);
           pathLength += dashWidth + dashSpace;
         }

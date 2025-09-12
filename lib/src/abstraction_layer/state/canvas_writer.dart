@@ -1,4 +1,3 @@
-
 import 'package:flexi_editor/src/abstraction_layer/state/model_writer.dart';
 import 'package:flexi_editor/src/abstraction_layer/state/state_writer.dart';
 

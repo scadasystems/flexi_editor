@@ -103,5 +103,5 @@ class CanvasEvent with ChangeNotifier {
 
   void startTapComponent() => _isTapComponent = true;
 
-  void endTapComponent() => _isTapComponent = false;
+  void stopTapComponent() => _isTapComponent = false;
 }

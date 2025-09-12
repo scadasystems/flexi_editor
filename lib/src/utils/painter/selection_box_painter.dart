@@ -30,7 +30,7 @@ class SelectionBoxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SelectionBoxPainter oldDelegate) {
-    return startPosition != oldDelegate.startPosition || 
-           endPosition != oldDelegate.endPosition;
+    return startPosition != oldDelegate.startPosition ||
+        endPosition != oldDelegate.endPosition;
   }
 }

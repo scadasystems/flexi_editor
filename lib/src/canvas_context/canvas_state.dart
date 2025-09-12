@@ -92,7 +92,8 @@ class CanvasState with ChangeNotifier {
   /// [components]: 컴포넌트 리스트
   /// [viewportSize]: 현재 뷰포트 크기
   /// [padding]: 경계 주변 여백 (기본값: 50)
-  void fitAllComponentsToView(List<Component> components, Size viewportSize, {double padding = 50.0}) {
+  void fitAllComponentsToView(List<Component> components, Size viewportSize,
+      {double padding = 50.0}) {
     if (components.isEmpty || viewportSize.isEmpty) {
       return;
     }
@@ -121,7 +122,8 @@ class CanvasState with ChangeNotifier {
     // 컴포넌트들의 경계를 뷰포트에 맞추기 위한 스케일 계산
     final scaleX = availableWidth / bounds.width;
     final scaleY = availableHeight / bounds.height;
-    final targetScale = (scaleX < scaleY ? scaleX : scaleY).clamp(minScale, maxScale);
+    final targetScale =
+        (scaleX < scaleY ? scaleX : scaleY).clamp(minScale, maxScale);
 
     // 스케일된 컴포넌트 경계의 중심을 뷰포트 중심으로 맞추기 위한 위치 계산
     final scaledBounds = Rect.fromLTWH(
@@ -131,7 +133,8 @@ class CanvasState with ChangeNotifier {
       bounds.height * targetScale,
     );
 
-    final viewportCenter = Offset(viewportSize.width / 2, viewportSize.height / 2);
+    final viewportCenter =
+        Offset(viewportSize.width / 2, viewportSize.height / 2);
     final boundsCenter = scaledBounds.center;
     final targetPosition = viewportCenter - boundsCenter;
 

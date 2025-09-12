@@ -75,12 +75,11 @@ class LinkStyle {
         return getSolidLinePath(point1, point2);
       case LineType.dashed:
         return getDashedLinePath(
-          point1, 
-          point2, 
-          scale, 
-          LinkStyleConstants.defaultDashLength, 
-          LinkStyleConstants.defaultDashSpacing
-        );
+            point1,
+            point2,
+            scale,
+            LinkStyleConstants.defaultDashLength,
+            LinkStyleConstants.defaultDashSpacing);
       case LineType.dotted:
         return getDashedLinePath(
           point1,
