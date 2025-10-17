@@ -223,11 +223,11 @@ mixin ComponentWriter on ModelWriter {
   }
 
   void setComponentLocked(String componentId) {
-    _canvasModel.getComponent(componentId).setLocked(true);
+    _canvasModel.getComponent(componentId).lock();
   }
 
   void setComponentUnlocked(String componentId) {
-    _canvasModel.getComponent(componentId).setLocked(false);
+    _canvasModel.getComponent(componentId).unlock();
   }
 }
 

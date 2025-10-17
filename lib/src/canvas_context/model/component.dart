@@ -86,10 +86,13 @@ class Component<T> with ChangeNotifier {
     parentId = null;
   }
 
-  void setLocked(bool locked) {
+  void _setLocked(bool locked) {
     this.locked = locked;
     notifyListeners();
   }
+
+  void lock() => _setLocked(true);
+  void unlock() => _setLocked(false);
 
   void addChild(String childId) {
     childrenIds.add(childId);
@@ -135,7 +138,7 @@ class Component<T> with ChangeNotifier {
         ),
         groupId = json['group_id'],
         groupName = json['group_name'],
-        groupCollapsed = json['group_collapsed'];
+        groupCollapsed = json['group_collapsed'] ?? false;
 
   Map<String, dynamic> toJson() => {
         'id': id,
