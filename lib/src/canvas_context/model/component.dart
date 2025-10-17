@@ -86,13 +86,14 @@ class Component<T> with ChangeNotifier {
     parentId = null;
   }
 
-  void _setLocked(bool locked) {
+  void setLocked(bool locked) {
     this.locked = locked;
     notifyListeners();
   }
 
-  void lock() => _setLocked(true);
-  void unlock() => _setLocked(false);
+  void lock() => setLocked(true);
+  void unlock() => setLocked(false);
+  void toggleLock() => setLocked(!locked);
 
   void addChild(String childId) {
     childrenIds.add(childId);
