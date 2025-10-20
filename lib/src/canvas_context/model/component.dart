@@ -34,6 +34,7 @@ class Component<T> with ChangeNotifier {
     List<String>? childrenIds,
     List<Connection>? connections,
     this.data,
+    this.locked = false,
     this.groupId,
     this.groupName,
     this.groupCollapsed = false,
@@ -137,6 +138,7 @@ class Component<T> with ChangeNotifier {
         data = decodeCustomComponentData?.call(
           json['dynamic_data'] ?? {},
         ),
+        locked = json['locked'] ?? false,
         groupId = json['group_id'],
         groupName = json['group_name'],
         groupCollapsed = json['group_collapsed'] ?? false;
@@ -152,6 +154,7 @@ class Component<T> with ChangeNotifier {
         if (childrenIds.isNotEmpty) 'children_ids': childrenIds,
         if (connections.isNotEmpty) 'connections': connections,
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
+        if (locked) 'locked': locked,
         if (groupId != null) 'group_id': groupId,
         if (groupName != null) 'group_name': groupName,
         if (groupCollapsed) 'group_collapsed': groupCollapsed,

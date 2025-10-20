@@ -125,19 +125,19 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                     ? () => widget.policy.onComponentDoubleTap(component.id)
                     : null,
                 onScaleStart: !hasChildren
-                    ? canvasEvent.isStartDragSelection
+                    ? canvasEvent.isStartDragSelection && !component.locked
                         ? (details) => widget.policy
                             .onComponentScaleStart(component.id, details)
                         : null
                     : null,
                 onScaleUpdate: !hasChildren
-                    ? canvasEvent.isStartDragSelection
+                    ? canvasEvent.isStartDragSelection && !component.locked
                         ? (details) => widget.policy
                             .onComponentScaleUpdate(component.id, details)
                         : null
                     : null,
                 onScaleEnd: !hasChildren
-                    ? canvasEvent.isStartDragSelection
+                    ? canvasEvent.isStartDragSelection && !component.locked
                         ? (details) {
                             canvasEvent.stopTapComponent();
                             widget.policy
