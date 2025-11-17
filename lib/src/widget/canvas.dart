@@ -37,8 +37,7 @@ class FlexiEditorCanvas extends StatefulWidget {
   FlexiEditorCanvasState createState() => FlexiEditorCanvasState();
 }
 
-class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
-    with TickerProviderStateMixin {
+class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
   late PolicySet withControlPolicy;
   List<Component> _cachedZOrderedComponents = [];
   List<Widget> _cachedComponentWidgets = [];
@@ -76,8 +75,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
 
     // 컴포넌트가 변경되었는지 확인
     if (_cachedZOrderedComponents.length != currentComponents.length ||
-        !_areComponentListsEqual(
-            _cachedZOrderedComponents, currentComponents)) {
+        !_areComponentListsEqual(_cachedZOrderedComponents, currentComponents)) {
       _cachedZOrderedComponents = currentComponents;
       _cachedComponentWidgets = currentComponents
           .map(
@@ -124,9 +122,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
+            key: ValueKey('under_${componentData.id}'),
             builder: (context, value, child) {
-              return widget.policy.showCustomWidgetWithComponentDataUnder(
-                  context, componentData);
+              return widget.policy.showCustomWidgetWithComponentDataUnder(context, componentData);
             },
           );
         },
@@ -140,6 +138,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
+            key: ValueKey('over_${componentData.id}'),
             builder: (context, value, child) {
               return widget.policy.buildComponentOverWidget(context, value);
             },
@@ -155,6 +154,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
+            key: ValueKey('link_over_${componentData.id}'),
             builder: (context, data, child) {
               return widget.policy.buildLinkOverWidget(context, data);
             },
@@ -200,8 +200,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   Widget canvasAnimated() {
-    final animationController =
-        (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    final animationController = (withControlPolicy as CanvasControlPolicy).getAnimationController();
     if (animationController == null) return canvasStack();
 
     return AnimatedBuilder(
@@ -250,8 +249,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
       onTap: event.isTapComponent ? null : widget.policy.onCanvasTap,
       onTapDown: event.isTapComponent ? null : widget.policy.onCanvasTapDown,
       onTapUp: event.isTapComponent ? null : widget.policy.onCanvasTapUp,
-      onTapCancel:
-          event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
+      onTapCancel: event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
     );
   }
 
@@ -261,8 +259,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
 
     return Consumer2<CanvasEvent, CanvasModel>(
       builder: (context, canvasEvent, canvasModel, child) {
-        if (canvasEvent.startDragPosition != null &&
-            canvasEvent.currentDragPosition != null) {
+        if (canvasEvent.startDragPosition != null && canvasEvent.currentDragPosition != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             final scale = canvasState.scale;
             final position = canvasState.position;
