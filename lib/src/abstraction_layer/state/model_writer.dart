@@ -212,7 +212,7 @@ mixin ComponentWriter on ModelWriter {
     }
   }
 
-  void _removeParentFromChildren(componentId) {
+  void _removeParentFromChildren(String componentId) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
     final component = _canvasModel.getComponent(componentId);

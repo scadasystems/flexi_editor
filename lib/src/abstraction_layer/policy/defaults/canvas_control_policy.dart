@@ -119,17 +119,10 @@ mixin CanvasControlPolicy on BasePolicySet {
     }
   }
 
-  void _handleTrackpadPinch(PointerScrollEvent event) {
-    const double sensitivity = 0.01;
-    double zoomFactor = 1.0;
-
-    // scrollDelta.dy를 기반으로 zoom 방향 결정
-    if (event.scrollDelta.dy < 0) {
-      zoomFactor = 1.0 + sensitivity;
-    } else if (event.scrollDelta.dy > 0) {
-      zoomFactor = 1.0 - sensitivity;
-    }
-
+  void zoomTowards({
+    required double zoomFactor,
+    required Offset focalPoint,
+  }) {
     if (zoomFactor == 1.0) return;
 
     double currentScale = canvasReader.state.scale;
@@ -137,7 +130,6 @@ mixin CanvasControlPolicy on BasePolicySet {
 
     if (newScale != currentScale) {
       Offset currentPosition = canvasReader.state.position;
-      Offset focalPoint = event.localPosition;
 
       var relativeFocalPoint = (focalPoint - currentPosition);
       var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
@@ -149,6 +141,20 @@ mixin CanvasControlPolicy on BasePolicySet {
       canvasWriter.state.setPosition(newPosition);
       canvasWriter.state.updateCanvas();
     }
+  }
+
+  void _handleTrackpadPinch(PointerScrollEvent event) {
+    const double sensitivity = 0.01;
+    double zoomFactor = 1.0;
+
+    // scrollDelta.dy를 기반으로 zoom 방향 결정
+    if (event.scrollDelta.dy < 0) {
+      zoomFactor = 1.0 + sensitivity;
+    } else if (event.scrollDelta.dy > 0) {
+      zoomFactor = 1.0 - sensitivity;
+    }
+
+    zoomTowards(zoomFactor: zoomFactor, focalPoint: event.localPosition);
   }
 
   void _tryHandleScaleEvent(PointerSignalEvent event) {
@@ -217,25 +223,7 @@ mixin CanvasControlPolicy on BasePolicySet {
       zoomFactor = 1.0 - zoomSensitivity;
     }
 
-    if (zoomFactor == 1.0) return;
-
-    double currentScale = canvasReader.state.scale;
-    double newScale = _clampScale(currentScale * zoomFactor);
-
-    if (newScale != currentScale) {
-      Offset currentPosition = canvasReader.state.position;
-      Offset focalPoint = event.localPosition;
-
-      var relativeFocalPoint = (focalPoint - currentPosition);
-      var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
-
-      Offset newPosition =
-          currentPosition + (relativeFocalPoint - focalPointScaled);
-
-      canvasWriter.state.setScale(newScale);
-      canvasWriter.state.setPosition(newPosition);
-      canvasWriter.state.updateCanvas();
-    }
+    zoomTowards(zoomFactor: zoomFactor, focalPoint: event.localPosition);
   }
 
   double _clampScale(double scale) {

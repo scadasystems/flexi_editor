@@ -1,4 +1,4 @@
-library flexi_editor;
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 
 export 'src/abstraction_layer/policy/base/canvas_policy.dart';
 export 'src/abstraction_layer/policy/base/canvas_widgets_policy.dart';
@@ -12,6 +12,7 @@ export 'src/abstraction_layer/policy/base/link_policy.dart';
 export 'src/abstraction_layer/policy/base/link_widgets_policy.dart';
 export 'src/abstraction_layer/policy/base/policy_set.dart';
 export 'src/abstraction_layer/policy/defaults/canvas_control_policy.dart';
+export 'src/abstraction_layer/policy/defaults/component_control_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_attachment_crystal_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_attachment_oval_policy.dart';
 export 'src/abstraction_layer/policy/defaults/link_attachment_rect_policy.dart';

@@ -37,11 +37,9 @@ class FlexiEditorCanvas extends StatefulWidget {
   FlexiEditorCanvasState createState() => FlexiEditorCanvasState();
 }
 
-class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProviderStateMixin {
+class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
+    with TickerProviderStateMixin {
   late PolicySet withControlPolicy;
-  List<Component> _cachedZOrderedComponents = [];
-  List<Widget> _cachedComponentWidgets = [];
-  List<Widget> _cachedLinkWidgets = [];
 
   // Pinch 상태 추적을 위한 변수들
   bool _isPinchActive = false;
@@ -73,47 +71,29 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
     final currentComponents = canvasModel.components.values.toList();
     currentComponents.sort((a, b) => a.zOrder.compareTo(b.zOrder));
 
-    // 컴포넌트가 변경되었는지 확인
-    if (_cachedZOrderedComponents.length != currentComponents.length ||
-        !_areComponentListsEqual(_cachedZOrderedComponents, currentComponents)) {
-      _cachedZOrderedComponents = currentComponents;
-      _cachedComponentWidgets = currentComponents
-          .map(
-            (e) => ChangeNotifierProvider<Component>.value(
-              value: e,
-              child: ComponentWidget(
-                policy: widget.policy,
-              ),
+    return currentComponents
+        .map(
+          (e) => ChangeNotifierProvider<Component>.value(
+            value: e,
+            key: ValueKey(e.id),
+            child: ComponentWidget(
+              policy: widget.policy,
             ),
-          )
-          .toList();
-    }
-
-    return _cachedComponentWidgets;
-  }
-
-  bool _areComponentListsEqual(List<Component> list1, List<Component> list2) {
-    if (list1.length != list2.length) return false;
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return false;
-    }
-    return true;
+          ),
+        )
+        .toList();
   }
 
   List<Widget> showLinks(CanvasModel canvasModel) {
     final currentLinks = canvasModel.links.values.toList();
 
-    // 링크 길이를 먼저 비교하여 변경 여부를 간단히 확인
-    if (_cachedLinkWidgets.length != currentLinks.length) {
-      _cachedLinkWidgets = currentLinks.map((LinkData linkData) {
-        return ChangeNotifierProvider.value(
-          value: linkData,
-          child: Link(policy: widget.policy),
-        );
-      }).toList();
-    }
-
-    return _cachedLinkWidgets;
+    return currentLinks.map((LinkData linkData) {
+      return ChangeNotifierProvider.value(
+        value: linkData,
+        key: ValueKey(linkData.id),
+        child: Link(policy: widget.policy),
+      );
+    }).toList();
   }
 
   List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
@@ -124,7 +104,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
           return Consumer<Component>(
             key: ValueKey('under_${componentData.id}'),
             builder: (context, value, child) {
-              return widget.policy.showCustomWidgetWithComponentDataUnder(context, componentData);
+              return widget.policy.showCustomWidgetWithComponentDataUnder(
+                  context, componentData);
             },
           );
         },
@@ -182,6 +163,18 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       onScaleUpdate: (details) {
         if (canvasEvent.isStartDragSelection) {
           canvasEvent.updateSelectDragPosition(details);
+
+          final start = canvasEvent.startDragPosition;
+          final current = canvasEvent.currentDragPosition;
+          if (start != null && current != null) {
+            final scale = canvasState.scale;
+            final position = canvasState.position;
+            final selectionRect = Rect.fromPoints(
+              (start - position) / scale,
+              (current - position) / scale,
+            );
+            widget.onSelectionRectUpdate?.call(selectionRect);
+          }
         } else {
           widget.policy.onCanvasScaleUpdateEvent(details);
         }
@@ -200,7 +193,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
   }
 
   Widget canvasAnimated() {
-    final animationController = (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    final animationController =
+        (withControlPolicy as CanvasControlPolicy).getAnimationController();
     if (animationController == null) return canvasStack();
 
     return AnimatedBuilder(
@@ -208,12 +202,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       builder: (context, child) {
         (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
         return Transform(
-          transform: Matrix4.identity()
-            ..translate(
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
-              (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
-            )
-            ..scale((withControlPolicy as CanvasControlPolicy).transformScale),
+          transform: Matrix4.translationValues(
+            (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
+            (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
+            0.0,
+          )..multiply(Matrix4.diagonal3Values(
+              (withControlPolicy as CanvasControlPolicy).transformScale,
+              (withControlPolicy as CanvasControlPolicy).transformScale,
+              1.0)),
           child: child,
         );
       },
@@ -249,29 +245,17 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas> with TickerProvide
       onTap: event.isTapComponent ? null : widget.policy.onCanvasTap,
       onTapDown: event.isTapComponent ? null : widget.policy.onCanvasTapDown,
       onTapUp: event.isTapComponent ? null : widget.policy.onCanvasTapUp,
-      onTapCancel: event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
+      onTapCancel:
+          event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
     );
   }
 
   /// 선택 드래그 영역
   Widget _buildSelectionBox(BuildContext context) {
-    final canvasState = context.read<CanvasState>();
-
     return Consumer2<CanvasEvent, CanvasModel>(
       builder: (context, canvasEvent, canvasModel, child) {
-        if (canvasEvent.startDragPosition != null && canvasEvent.currentDragPosition != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final scale = canvasState.scale;
-            final position = canvasState.position;
-
-            final selectionRect = Rect.fromPoints(
-              (canvasEvent.startDragPosition! - position) / scale,
-              (canvasEvent.currentDragPosition! - position) / scale,
-            );
-
-            widget.onSelectionRectUpdate?.call(selectionRect);
-          });
-
+        if (canvasEvent.startDragPosition != null &&
+            canvasEvent.currentDragPosition != null) {
           return Positioned.fill(
             child: CustomPaint(
               painter: SelectionBoxPainter(

@@ -161,8 +161,8 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                         width: component.size.width,
                         height: component.size.height,
                         child: Container(
-                          transform: Matrix4.identity()
-                            ..scale(canvasState.scale),
+                          transform: Matrix4.diagonal3Values(
+                              canvasState.scale, canvasState.scale, 1.0),
                           child: _componentBody,
                         ),
                       ),
