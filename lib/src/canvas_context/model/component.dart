@@ -1,5 +1,4 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:flexi_editor/src/canvas_context/model/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,7 +12,6 @@ class Component<T> with ChangeNotifier {
   bool locked = false;
   String? parentId;
   final List<String> childrenIds;
-  final List<Connection> connections;
   T? data;
 
   // 그룹 관련 필드
@@ -32,15 +30,13 @@ class Component<T> with ChangeNotifier {
     this.parentId,
     this.zOrder = 0,
     List<String>? childrenIds,
-    List<Connection>? connections,
     this.data,
     this.locked = false,
     this.groupId,
     this.groupName,
     this.groupCollapsed = false,
   })  : id = id ?? const Uuid().v4(),
-        childrenIds = childrenIds ?? [],
-        connections = connections ?? [];
+        childrenIds = childrenIds ?? [];
 
   void refresh() => notifyListeners();
 
@@ -54,14 +50,6 @@ class Component<T> with ChangeNotifier {
     notifyListeners();
   }
 
-  void addConnection(Connection connection) {
-    connections.add(connection);
-  }
-
-  void removeConnection(String connectionId) {
-    connections.removeWhere((conn) => conn.connectionId == connectionId);
-  }
-
   void resizeDelta(Offset deltaSize) {
     size = size + deltaSize;
     notifyListeners();
@@ -70,6 +58,21 @@ class Component<T> with ChangeNotifier {
   void setSize(Size size) {
     this.size = size;
     notifyListeners();
+  }
+
+  Offset getPortPosition(String portName) {
+    switch (portName) {
+      case 'top':
+        return position + Offset(size.width / 2, 0);
+      case 'bottom':
+        return position + Offset(size.width / 2, size.height);
+      case 'left':
+        return position + Offset(0, size.height / 2);
+      case 'right':
+        return position + Offset(size.width, size.height / 2);
+      default:
+        return position + size.center(Offset.zero);
+    }
   }
 
   Offset getPointOnComponent(Alignment alignment) {
@@ -130,11 +133,6 @@ class Component<T> with ChangeNotifier {
         childrenIds = json['children_ids'] != null //
             ? (json['children_ids'] as List).map((id) => id.toString()).toList()
             : [],
-        connections = json['connections'] != null
-            ? (json['connections'] as List)
-                .map((connectionJson) => Connection.fromJson(connectionJson))
-                .toList()
-            : [],
         data = decodeCustomComponentData?.call(
           json['dynamic_data'] ?? {},
         ),
@@ -152,7 +150,6 @@ class Component<T> with ChangeNotifier {
         'z_order': zOrder,
         if (parentId != null) 'parent_id': parentId,
         if (childrenIds.isNotEmpty) 'children_ids': childrenIds,
-        if (connections.isNotEmpty) 'connections': connections,
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
         if (locked) 'locked': locked,
         if (groupId != null) 'group_id': groupId,

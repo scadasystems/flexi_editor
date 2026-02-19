@@ -1,5 +1,5 @@
 import 'package:flexi_editor/src/abstraction_layer/policy/base_policy_set.dart';
-import 'package:flutter/gestures.dart';
+import 'package:flutter/widgets.dart';
 
 mixin ComponentPolicy on BasePolicySet {
   void onComponentEnter(String componentId) {}
@@ -14,8 +14,11 @@ mixin ComponentPolicy on BasePolicySet {
 
   void onComponentTapCancel(String componentId) {}
 
-  void onComponentScaleStart(String componentId, ScaleStartDetails details,
-      {bool forceMove = false}) {}
+  void onComponentScaleStart(
+    String componentId,
+    ScaleStartDetails details, {
+    bool forceMove = false,
+  }) {}
 
   void onComponentScaleUpdate(String componentId, ScaleUpdateDetails details) {}
 
@@ -24,4 +27,10 @@ mixin ComponentPolicy on BasePolicySet {
   void onComponentDoubleTapDown(String componentId, TapDownDetails details) {}
 
   void onComponentDoubleTap(String componentId) {}
+
+  void onComponentSecondaryTap(
+    BuildContext context,
+    String componentId,
+    TapDownDetails details,
+  ) {}
 }

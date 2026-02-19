@@ -7,9 +7,6 @@ class PolicySet extends BasePolicySet
         CanvasPolicy,
         ComponentPolicy,
         ComponentDesignPolicy,
-        LinkPolicy,
-        LinkJointPolicy,
-        LinkAttachmentPolicy,
-        LinkWidgetsPolicy,
+        GroupPolicy,
         CanvasWidgetsPolicy,
         ComponentWidgetsPolicy {}

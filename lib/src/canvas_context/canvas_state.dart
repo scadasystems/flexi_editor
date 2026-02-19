@@ -18,12 +18,63 @@ class CanvasState with ChangeNotifier {
 
   bool isInitialized = false;
 
+  final Set<String> _selectedComponentIds = {};
+  Set<String> get selectedComponentIds => _selectedComponentIds;
+
+  // 호버링 중인 포트 ID (componentId:portName)
+  String? _hoveredPortId;
+  String? get hoveredPortId => _hoveredPortId;
+
+  // 연결된 포트 ID 집합 (componentId:portName)
+  final Set<String> _connectedPortIds = {};
+  Set<String> get connectedPortIds => _connectedPortIds;
+
   Offset get position => _position;
 
   double get scale => _scale;
 
   void updateCanvas() {
     notifyListeners();
+  }
+
+  void selectComponent(String id) {
+    _selectedComponentIds.add(id);
+    notifyListeners();
+  }
+
+  void deselectComponent(String id) {
+    _selectedComponentIds.remove(id);
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    _selectedComponentIds.clear();
+    notifyListeners();
+  }
+
+  bool isComponentSelected(String id) {
+    return _selectedComponentIds.contains(id);
+  }
+
+  void setHoveredPort(String? portId) {
+    if (_hoveredPortId != portId) {
+      _hoveredPortId = portId;
+      notifyListeners();
+    }
+  }
+
+  void addConnectedPort(String portId) {
+    _connectedPortIds.add(portId);
+    notifyListeners();
+  }
+
+  void removeConnectedPort(String portId) {
+    _connectedPortIds.remove(portId);
+    notifyListeners();
+  }
+
+  bool isPortConnected(String portId) {
+    return _connectedPortIds.contains(portId);
   }
 
   void setPosition(Offset position) {

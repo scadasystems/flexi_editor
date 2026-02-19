@@ -16,7 +16,7 @@ class DeleteIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    var paint = Paint()
+    final paint = Paint()
       ..color = Colors.white.withValues(alpha: _backgroundAlpha)
       ..style = PaintingStyle.fill;
 
@@ -31,7 +31,7 @@ class DeleteIconPainter extends CustomPainter {
 
     paint.color = color;
 
-    var halfRadius = radius / 2;
+    final halfRadius = radius / 2;
     canvas.drawLine(
       location + Offset(-halfRadius, -halfRadius),
       location + Offset(halfRadius, halfRadius),

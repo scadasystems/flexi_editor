@@ -6,7 +6,7 @@ import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
-import 'package:flexi_editor/src/widget/link.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -84,18 +84,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         .toList();
   }
 
-  List<Widget> showLinks(CanvasModel canvasModel) {
-    final currentLinks = canvasModel.links.values.toList();
-
-    return currentLinks.map((LinkData linkData) {
-      return ChangeNotifierProvider.value(
-        value: linkData,
-        key: ValueKey(linkData.id),
-        child: Link(policy: widget.policy),
-      );
-    }).toList();
-  }
-
   List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
     return canvasModel.components.values.map((Component componentData) {
       return ChangeNotifierProvider.value(
@@ -105,7 +93,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
             key: ValueKey('under_${componentData.id}'),
             builder: (context, value, child) {
               return widget.policy.showCustomWidgetWithComponentDataUnder(
-                  context, componentData);
+                context,
+                componentData,
+              );
             },
           );
         },
@@ -193,8 +183,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   Widget canvasAnimated() {
-    final animationController =
-        (withControlPolicy as CanvasControlPolicy).getAnimationController();
+    final animationController = (withControlPolicy as CanvasControlPolicy)
+        .getAnimationController();
     if (animationController == null) return canvasStack();
 
     return AnimatedBuilder(
@@ -202,14 +192,18 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
       builder: (context, child) {
         (withControlPolicy as CanvasControlPolicy).canUpdateCanvasModel = true;
         return Transform(
-          transform: Matrix4.translationValues(
-            (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
-            (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
-            0.0,
-          )..multiply(Matrix4.diagonal3Values(
-              (withControlPolicy as CanvasControlPolicy).transformScale,
-              (withControlPolicy as CanvasControlPolicy).transformScale,
-              1.0)),
+          transform:
+              Matrix4.translationValues(
+                (withControlPolicy as CanvasControlPolicy).transformPosition.dx,
+                (withControlPolicy as CanvasControlPolicy).transformPosition.dy,
+                0.0,
+              )..multiply(
+                Matrix4.diagonal3Values(
+                  (withControlPolicy as CanvasControlPolicy).transformScale,
+                  (withControlPolicy as CanvasControlPolicy).transformScale,
+                  1.0,
+                ),
+              ),
           child: child,
         );
       },
@@ -218,35 +212,32 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   }
 
   Widget canvasStack() {
-    return Consumer3<CanvasState, CanvasEvent, CanvasModel>(
-      builder: (context, state, event, model, child) {
-        return DeferredPointerHandler(
-          child: Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.expand,
-            children: [
-              _buildCanvasClickable(event),
-              ...showComponents(model),
-              ...buildComponentOverWidget(model),
-              ...widget.policy.showCustomWidgetsOnCanvasBackground(context),
-              ...showLinks(model),
-              ...widget.policy.showCustomWidgetsOnCanvasForeground(context),
-              ...buildLinkOverWidget(model),
-            ],
+    return DeferredPointerHandler(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _CustomBackgroundWidgetsLayer(policy: widget.policy),
+          Selector<CanvasEvent, bool>(
+            selector: (_, event) => event.isTapComponent,
+            builder: (context, isTapComponent, _) {
+              return _buildCanvasClickable(context, isTapComponent);
+            },
           ),
-        );
-      },
+          _ComponentsLayer(policy: widget.policy),
+          _ComponentOverWidgetsLayer(policy: widget.policy),
+          _CustomForegroundWidgetsLayer(policy: widget.policy),
+        ],
+      ),
     );
   }
 
   /// 캔버스 클릭 영역
-  Widget _buildCanvasClickable(CanvasEvent event) {
+  Widget _buildCanvasClickable(BuildContext context, bool isTapComponent) {
     return GestureDetector(
-      onTap: event.isTapComponent ? null : widget.policy.onCanvasTap,
-      onTapDown: event.isTapComponent ? null : widget.policy.onCanvasTapDown,
-      onTapUp: event.isTapComponent ? null : widget.policy.onCanvasTapUp,
-      onTapCancel:
-          event.isTapComponent ? null : widget.policy.onCanvasTapCancel,
+      onTap: isTapComponent ? null : widget.policy.onCanvasTap,
+      onTapDown: isTapComponent ? null : widget.policy.onCanvasTapDown,
+      onTapUp: isTapComponent ? null : widget.policy.onCanvasTapUp,
+      onTapCancel: isTapComponent ? null : widget.policy.onCanvasTapCancel,
     );
   }
 
@@ -283,10 +274,12 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
               onPanStart: (details) {
                 canvasEvent.setMouseGrabCursor(true);
                 _isDragging = true;
-                widget.policy.onCanvasScaleStart(ScaleStartDetails(
-                  focalPoint: details.localPosition,
-                  pointerCount: 1,
-                ));
+                widget.policy.onCanvasScaleStart(
+                  ScaleStartDetails(
+                    focalPoint: details.localPosition,
+                    pointerCount: 1,
+                  ),
+                );
               },
               onPanUpdate: (details) {
                 if (_isDragging) {
@@ -381,17 +374,6 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
             onPointerSignal: (event) {
               // PointerScrollEvent는 CanvasControlPolicy의 onCanvasPointerSignal에서 직접 처리
               if (event is PointerScrollEvent) {
-                // 입력 장치 타입에 따라 다른 로그 출력
-                // final deviceType = event.kind;
-                // if (deviceType == PointerDeviceKind.trackpad) {
-                //   debugPrint('🤏 트랙패드 두 손가락 드래그 (캔버스 이동): ${event.scrollDelta}');
-                // } else if (deviceType == PointerDeviceKind.mouse) {
-                //   final zoomDirection = event.scrollDelta.dy < 0 ? '줌 인' : '줌 아웃';
-                //   debugPrint('🖱️ 마우스 스크롤 ($zoomDirection): ${event.scrollDelta}');
-                // } else {
-                //   debugPrint('📱 기타 장치 스크롤 ($deviceType): ${event.scrollDelta}');
-                // }
-
                 widget.policy.onCanvasPointerSignal(event);
                 return;
               }
@@ -415,6 +397,126 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ComponentsLayer extends StatelessWidget {
+  final PolicySet policy;
+
+  const _ComponentsLayer({required this.policy});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<CanvasModel, List<String>>(
+      selector: (_, model) {
+        final currentComponents = model.components.values.toList();
+        currentComponents.sort((a, b) => a.zOrder.compareTo(b.zOrder));
+        return currentComponents.map((e) => e.id).toList();
+      },
+      shouldRebuild: (previous, next) => !listEquals(previous, next),
+      builder: (context, componentIds, _) {
+        return Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.expand,
+          children: componentIds.map((id) {
+            return Selector<CanvasModel, Component>(
+              key: ValueKey(id),
+              selector: (_, model) => model.getComponent(id),
+              builder: (context, component, _) {
+                return ChangeNotifierProvider<Component>.value(
+                  value: component,
+                  child: ComponentWidget(policy: policy),
+                );
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ComponentOverWidgetsLayer extends StatelessWidget {
+  final PolicySet policy;
+
+  const _ComponentOverWidgetsLayer({required this.policy});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<CanvasModel, List<String>>(
+      selector: (_, model) => model.components.keys.toList(),
+      shouldRebuild: (previous, next) => !listEquals(previous, next),
+      builder: (context, componentIds, _) {
+        return Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.expand,
+          children: componentIds.map((id) {
+            return Selector<CanvasModel, Component>(
+              key: ValueKey('over_$id'),
+              selector: (_, model) => model.getComponent(id),
+              builder: (context, component, _) {
+                return ChangeNotifierProvider<Component>.value(
+                  value: component,
+                  child: Consumer2<Component, CanvasState>(
+                    builder: (context, component, canvasState, child) {
+                      final left =
+                          canvasState.scale * component.position.dx +
+                          canvasState.position.dx;
+                      final top =
+                          canvasState.scale * component.position.dy +
+                          canvasState.position.dy;
+                      final width = canvasState.scale * component.size.width;
+                      final height = canvasState.scale * component.size.height;
+
+                      return Positioned(
+                        left: left,
+                        top: top,
+                        width: width,
+                        height: height,
+                        child: policy.buildComponentOverWidget(
+                          context,
+                          component,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _CustomBackgroundWidgetsLayer extends StatelessWidget {
+  final PolicySet policy;
+
+  const _CustomBackgroundWidgetsLayer({required this.policy});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand,
+      children: policy.showCustomWidgetsOnCanvasBackground(context),
+    );
+  }
+}
+
+class _CustomForegroundWidgetsLayer extends StatelessWidget {
+  final PolicySet policy;
+
+  const _CustomForegroundWidgetsLayer({required this.policy});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand,
+      children: policy.showCustomWidgetsOnCanvasForeground(context),
     );
   }
 }

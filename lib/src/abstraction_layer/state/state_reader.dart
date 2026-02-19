@@ -19,20 +19,23 @@ class CanvasStateReader {
 
   Color get color => canvasState.color;
 
-  Offset fromCanvasCoordinates(Offset position) {
-    return canvasState.fromCanvasCoordinates(position);
-  }
+  Offset fromCanvasCoordinates(Offset position) =>
+      canvasState.fromCanvasCoordinates(position);
 
-  Offset toCanvasCoordinates(Offset position) {
-    return canvasState.toCanvasCoordinates(position);
-  }
+  Offset toCanvasCoordinates(Offset position) =>
+      canvasState.toCanvasCoordinates(position);
 
-  double toCanvasSize(double size) {
-    return canvasState.toCanvasSize(size);
-  }
+  double toCanvasSize(double size) => canvasState.toCanvasSize(size);
 
   /// 모든 컴포넌트의 경계를 계산합니다.
-  Rect calculateComponentsBounds(List<Component> components) {
-    return canvasState.calculateComponentsBounds(components);
-  }
+  Rect calculateComponentsBounds(List<Component> components) =>
+      canvasState.calculateComponentsBounds(components);
+
+  bool isComponentSelected(String id) => canvasState.isComponentSelected(id);
+
+  Set<String> get selectedComponentIds => canvasState.selectedComponentIds;
+
+  GlobalKey get canvasGlobalKey => canvasState.canvasGlobalKey;
+
+  String? get hoveredPortId => canvasState.hoveredPortId;
 }

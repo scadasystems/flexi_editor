@@ -41,15 +41,7 @@ class ComponentHighlightPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     if (dashWidth <= 0 || dashSpace <= 0) {
-      canvas.drawRect(
-        Rect.fromLTWH(
-          0,
-          0,
-          this.width,
-          this.height,
-        ),
-        paint,
-      );
+      canvas.drawRect(Rect.fromLTWH(0, 0, this.width, this.height), paint);
       return;
     }
 
@@ -79,14 +71,16 @@ class ComponentHighlightPainter extends CustomPainter {
         type == ComponentHighlightPainterType.solid) {
       canvas.drawRRect(rect, paint);
     } else {
-      Path path = Path()..addRRect(rect);
-      Path dashedPath = Path();
-      var pathMetrics = path.computeMetrics().toList();
-      for (var metric in pathMetrics) {
+      final path = Path()..addRRect(rect);
+      final dashedPath = Path();
+      final pathMetrics = path.computeMetrics().toList();
+      for (final metric in pathMetrics) {
         var pathLength = 0.0;
         while (pathLength < metric.length) {
-          var extractPath =
-              metric.extractPath(pathLength, pathLength + dashWidth);
+          final extractPath = metric.extractPath(
+            pathLength,
+            pathLength + dashWidth,
+          );
           dashedPath.addPath(extractPath, Offset.zero);
           pathLength += dashWidth + dashSpace;
         }

@@ -58,4 +58,28 @@ class CanvasStateWriter {
   void setMinScale(double scale) {
     _canvasState.minScale = scale;
   }
+
+  void setHoveredPort(String? portId) {
+    _canvasState.setHoveredPort(portId);
+  }
+
+  void addConnectedPort(String portId) {
+    _canvasState.addConnectedPort(portId);
+  }
+
+  void removeConnectedPort(String portId) {
+    _canvasState.removeConnectedPort(portId);
+  }
+
+  void selectComponent(String id) {
+    _canvasState.selectComponent(id);
+  }
+
+  void deselectComponent(String id) {
+    _canvasState.deselectComponent(id);
+  }
+
+  void clearSelection() {
+    _canvasState.clearSelection();
+  }
 }
