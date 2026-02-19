@@ -13,12 +13,12 @@ dependencies:
     sdk: flutter
   
   defer_pointer: ^0.0.2
-  provider: ^6.1.5
-  uuid: ^4.5.1
+  provider: ^6.1.5+1
+  uuid: ^4.5.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
   
 flutter:
