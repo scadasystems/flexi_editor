@@ -33,10 +33,16 @@ class EditorPage extends StatefulWidget {
 class _EditorPageState extends State<EditorPage> {
   late final FlexiEditorContext _flexiEditorContext;
 
+  // Grid Settings State
+  GridType _gridType = .point;
+  double _gridSpacing = 40.0;
+  Color _gridColor = Colors.grey.withValues(alpha: 0.3);
+
   @override
   void initState() {
     super.initState();
     _flexiEditorContext = FlexiEditorContext(MyPolicySet());
+    _flexiEditorContext.policySet.canvasWriter.model.setGridType(_gridType);
   }
 
   @override
@@ -65,13 +71,123 @@ class _EditorPageState extends State<EditorPage> {
             onPressed: _ungroupSelected,
             tooltip: 'Ungroup',
           ),
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              tooltip: 'Settings',
+            ),
+          ),
         ],
+      ),
+      endDrawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.deepPurple),
+              child: Text(
+                'Settings',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Grid Settings',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              title: const Text('Grid Type'),
+              trailing: DropdownButton<GridType>(
+                value: _gridType,
+                onChanged: (GridType? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _gridType = newValue;
+                    });
+                    _flexiEditorContext.policySet.canvasWriter.model
+                        .setGridType(newValue);
+                  }
+                },
+                items: GridType.values.map<DropdownMenuItem<GridType>>((
+                  GridType value,
+                ) {
+                  return DropdownMenuItem<GridType>(
+                    value: value,
+                    child: Text(value.name.toUpperCase()),
+                  );
+                }).toList(),
+              ),
+            ),
+            if (_gridType != GridType.none) ...[
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text('Grid Spacing'),
+              ),
+              Slider(
+                value: _gridSpacing,
+                min: 10.0,
+                max: 100.0,
+                divisions: 9,
+                label: _gridSpacing.round().toString(),
+                onChanged: (double value) {
+                  setState(() {
+                    _gridSpacing = value;
+                  });
+                  _flexiEditorContext.policySet.canvasWriter.model
+                      .setGridSpacing(value);
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text('Grid Color'),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Wrap(
+                  spacing: 8.0,
+                  children: [
+                    _buildColorChoice(Colors.grey.withValues(alpha: 0.3)),
+                    _buildColorChoice(Colors.blue.withValues(alpha: 0.3)),
+                    _buildColorChoice(Colors.red.withValues(alpha: 0.3)),
+                    _buildColorChoice(Colors.green.withValues(alpha: 0.3)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
       body: FlexiEditor(
         flexiEditorContext: _flexiEditorContext,
         onSelectionRectStart: () {},
         onSelectionRectUpdate: (selectionRect) {},
         onSelectionRectEnd: () {},
+      ),
+    );
+  }
+
+  Widget _buildColorChoice(Color color) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _gridColor = color;
+        });
+        _flexiEditorContext.policySet.canvasWriter.model.setGridColor(color);
+      },
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _gridColor == color ? Colors.black : Colors.transparent,
+            width: 2,
+          ),
+        ),
       ),
     );
   }
@@ -137,10 +253,7 @@ class NodeData {
 
 // Custom Policy Set
 class MyPolicySet extends PolicySet
-    with
-        CanvasControlPolicy,
-        CustomComponentControlPolicy,
-        GroupPolicy {
+    with CanvasControlPolicy, CustomComponentControlPolicy, GroupPolicy {
   @override
   Widget buildComponentOverWidget(
     BuildContext context,

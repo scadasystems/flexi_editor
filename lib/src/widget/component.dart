@@ -1,5 +1,7 @@
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
+import 'package:flexi_editor/src/canvas_context/model/port_type.dart';
+import 'package:flexi_editor/src/widget/port.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -72,30 +74,30 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                 : null,
             onScaleStart: !hasChildren
                 ? canvasEvent.isStartDragSelection && !component.locked
-                      ? (details) => widget.policy.onComponentScaleStart(
-                          component.id,
-                          details,
-                        )
-                      : null
+                    ? (details) => widget.policy.onComponentScaleStart(
+                        component.id,
+                        details,
+                      )
+                    : null
                 : null,
             onScaleUpdate: !hasChildren
                 ? canvasEvent.isStartDragSelection && !component.locked
-                      ? (details) => widget.policy.onComponentScaleUpdate(
-                          component.id,
-                          details,
-                        )
-                      : null
+                    ? (details) => widget.policy.onComponentScaleUpdate(
+                        component.id,
+                        details,
+                      )
+                    : null
                 : null,
             onScaleEnd: !hasChildren
                 ? canvasEvent.isStartDragSelection && !component.locked
-                      ? (details) {
-                          canvasEvent.stopTapComponent();
-                          widget.policy.onComponentScaleEnd(
-                            component.id,
-                            details,
-                          );
-                        }
-                      : null
+                    ? (details) {
+                        canvasEvent.stopTapComponent();
+                        widget.policy.onComponentScaleEnd(
+                          component.id,
+                          details,
+                        );
+                      }
+                    : null
                 : null,
             child: MouseRegion(
               onEnter: !hasChildren
@@ -106,18 +108,14 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                   : null,
               child: Stack(
                 fit: StackFit.expand,
+                clipBehavior: Clip.none, // 포트가 밖으로 나갈 수 있도록 설정
                 children: [
                   Positioned(
                     left: 0,
                     top: 0,
-                    width: component.size.width,
-                    height: component.size.height,
+                    width: width,
+                    height: height,
                     child: Container(
-                      transform: Matrix4.diagonal3Values(
-                        canvasState.scale,
-                        canvasState.scale,
-                        1.0,
-                      ),
                       child: widget.policy.showComponentBody(component),
                     ),
                   ),
@@ -125,6 +123,8 @@ class _ComponentWidgetState extends State<ComponentWidget> {
                     context,
                     component,
                   ),
+                  // 포트 위젯 추가
+                  if (component.showPort) ..._buildPorts(component, width, height),
                 ],
               ),
             ),
@@ -132,5 +132,58 @@ class _ComponentWidgetState extends State<ComponentWidget> {
         );
       },
     );
+  }
+
+  List<Widget> _buildPorts(
+      Component component, double scaledWidth, double scaledHeight) {
+    const double portSize = 12.0;
+    final List<Widget> ports = [];
+
+    for (final type in PortType.values) {
+      if (!component.isPortVisible(type)) continue;
+
+      double? left, top, right, bottom;
+
+      // 포트의 중심이 해당 위치에 오도록 좌표 계산
+      // getPortPosition은 컴포넌트의 Border 상의 점을 반환하므로
+      // 해당 점을 중심으로 포트를 그리기 위해 portSize / 2 만큼 이동해야 함
+      switch (type) {
+        case PortType.top:
+          left = scaledWidth / 2 - portSize / 2;
+          top = -portSize / 2;
+          break;
+        case PortType.bottom:
+          left = scaledWidth / 2 - portSize / 2;
+          top = scaledHeight - portSize / 2; // bottom 대신 top 사용으로 통일성 확보
+          break;
+        case PortType.left:
+          top = scaledHeight / 2 - portSize / 2;
+          left = -portSize / 2;
+          break;
+        case PortType.right:
+          top = scaledHeight / 2 - portSize / 2;
+          left = scaledWidth - portSize / 2; // right 대신 left 사용으로 통일성 확보
+          break;
+      }
+
+      ports.add(
+        Positioned(
+          left: left,
+          top: top,
+          right: right,
+          bottom: bottom,
+          width: portSize,
+          height: portSize,
+          child: PortWidget(
+            componentId: component.id,
+            portType: type,
+            policy: widget.policy,
+            size: portSize,
+          ),
+        ),
+      );
+    }
+
+    return ports;
   }
 }

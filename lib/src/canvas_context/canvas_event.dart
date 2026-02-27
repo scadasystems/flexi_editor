@@ -1,5 +1,24 @@
+import 'package:flexi_editor/src/canvas_context/model/port_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+class PortInfo {
+  final String componentId;
+  final PortType portType;
+
+  PortInfo(this.componentId, this.portType);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is PortInfo &&
+        other.componentId == componentId &&
+        other.portType == portType;
+  }
+
+  @override
+  int get hashCode => componentId.hashCode ^ portType.hashCode;
+}
 
 class CanvasEvent with ChangeNotifier {
   final _keyboardFocusNode = FocusNode();
@@ -25,6 +44,22 @@ class CanvasEvent with ChangeNotifier {
 
   bool _isTapComponent = false;
   bool get isTapComponent => _isTapComponent;
+
+  // 연결 드래그 관련 상태
+  bool _isDragConnection = false;
+  bool get isDragConnection => _isDragConnection;
+
+  String? _draggingSourceComponentId;
+  String? get draggingSourceComponentId => _draggingSourceComponentId;
+
+  PortType? _draggingSourcePort;
+  PortType? get draggingSourcePort => _draggingSourcePort;
+
+  PortInfo? _hoveringPort;
+  PortInfo? get hoveringPort => _hoveringPort;
+
+  PortInfo? _snappedPort;
+  PortInfo? get snappedPort => _snappedPort;
 
   @override
   void dispose() {
@@ -104,4 +139,52 @@ class CanvasEvent with ChangeNotifier {
   void startTapComponent() => _isTapComponent = true;
 
   void stopTapComponent() => _isTapComponent = false;
+
+  // 연결 드래그 관련 메서드
+
+  void startDragConnection(String componentId, PortType portType, Offset startPos) {
+    _isDragConnection = true;
+    _draggingSourceComponentId = componentId;
+    _draggingSourcePort = portType;
+    _startDragPosition = startPos;
+    _currentDragPosition = startPos;
+    // 드래그 시작 시 selection 비활성화
+    _isStartDragSelection = false;
+    notifyListeners();
+  }
+
+  void updateDragConnection(Offset currentPos) {
+    _currentDragPosition = currentPos;
+    notifyListeners();
+  }
+
+  void stopDragConnection() {
+    _isDragConnection = false;
+    _draggingSourceComponentId = null;
+    _draggingSourcePort = null;
+    _startDragPosition = null;
+    _currentDragPosition = null;
+    _snappedPort = null;
+    // 드래그 종료 시 selection 다시 활성화
+    _isStartDragSelection = true;
+    notifyListeners();
+  }
+
+  void setHoveringPort(String? componentId, PortType? portType) {
+    if (componentId == null || portType == null) {
+      _hoveringPort = null;
+    } else {
+      _hoveringPort = PortInfo(componentId, portType);
+    }
+    notifyListeners();
+  }
+
+  void setSnappedPort(String? componentId, PortType? portType) {
+    if (componentId == null || portType == null) {
+      _snappedPort = null;
+    } else {
+      _snappedPort = PortInfo(componentId, portType);
+    }
+    notifyListeners();
+  }
 }

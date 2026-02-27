@@ -4,6 +4,9 @@ import 'package:defer_pointer/defer_pointer.dart';
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
+import 'package:flexi_editor/src/canvas_context/model/port_type.dart';
+import 'package:flexi_editor/src/utils/painter/connection_painter.dart';
+import 'package:flexi_editor/src/utils/painter/grid_painter.dart';
 import 'package:flexi_editor/src/utils/painter/selection_box_painter.dart';
 import 'package:flexi_editor/src/widget/component.dart';
 import 'package:flutter/foundation.dart';
@@ -217,6 +220,8 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
         fit: StackFit.expand,
         children: [
           _CustomBackgroundWidgetsLayer(policy: widget.policy),
+          _GridLayer(), // 그리드 레이어
+          _ConnectionsLayer(), // 연결선 레이어 (다시 컴포넌트 아래로 이동)
           Selector<CanvasEvent, bool>(
             selector: (_, event) => event.isTapComponent,
             builder: (context, isTapComponent, _) {
@@ -245,6 +250,11 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   Widget _buildSelectionBox(BuildContext context) {
     return Consumer2<CanvasEvent, CanvasModel>(
       builder: (context, canvasEvent, canvasModel, child) {
+        // 연결선 드래그 중에는 선택 영역 표시하지 않음
+        if (canvasEvent.isDragConnection) {
+          return const SizedBox.shrink();
+        }
+
         if (canvasEvent.startDragPosition != null &&
             canvasEvent.currentDragPosition != null) {
           return Positioned.fill(
@@ -517,6 +527,64 @@ class _CustomForegroundWidgetsLayer extends StatelessWidget {
       clipBehavior: Clip.none,
       fit: StackFit.expand,
       children: policy.showCustomWidgetsOnCanvasForeground(context),
+    );
+  }
+}
+
+class _GridLayer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<CanvasModel, CanvasState>(
+      builder: (context, canvasModel, canvasState, child) {
+        return CustomPaint(
+          painter: GridPainter(
+            gridType: canvasModel.gridType,
+            gridColor: canvasModel.gridColor,
+            gridSpacing: canvasModel.gridSpacing,
+            position: canvasState.position,
+            scale: canvasState.scale,
+          ),
+          child: Container(),
+        );
+      },
+    );
+  }
+}
+
+class _ConnectionsLayer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer3<CanvasModel, CanvasEvent, CanvasState>(
+      builder: (context, canvasModel, canvasEvent, canvasState, child) {
+        String? snappedPortComponentId;
+        PortType? snappedPortType;
+
+        if (canvasEvent.snappedPort != null) {
+          snappedPortComponentId = canvasEvent.snappedPort!.componentId;
+          snappedPortType = canvasEvent.snappedPort!.portType;
+        }
+
+        return CustomPaint(
+          painter: ConnectionPainter(
+            connections: canvasModel.connections.values.toList(),
+            components: canvasModel.components,
+            dragStart: canvasEvent.startDragPosition,
+            dragEnd: canvasEvent.currentDragPosition,
+            dragSourceComponentId: canvasEvent.draggingSourceComponentId,
+            dragSourcePort: canvasEvent.draggingSourcePort,
+            snappedPortComponentId: snappedPortComponentId,
+            snappedPortType: snappedPortType,
+            // CanvasState의 변경사항(scale, position)이 발생하면 다시 그려야 하므로
+            // Consumer에 CanvasState를 추가하고, Painter에 전달하거나 의존성을 만듭니다.
+            // 여기서는 Painter 내부에서 scale을 사용하지 않더라도,
+            // CanvasState가 변경될 때마다 rebuild되어야 하므로 Consumer3를 사용합니다.
+            // 필요하다면 Painter에 scale 정보를 전달할 수도 있습니다.
+            scale: canvasState.scale,
+            offset: canvasState.position,
+          ),
+          child: Container(),
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/model/flexi_data.dart';
+import 'package:flexi_editor/src/canvas_context/model/grid_type.dart';
 import 'package:flutter/material.dart';
 
 class ModelWriter {
@@ -235,6 +236,18 @@ mixin ComponentWriter on ModelWriter {
 
   void setComponentUnlocked(String componentId) {
     _canvasModel.getComponent(componentId).unlock();
+  }
+
+  void setGridType(GridType type) {
+    _canvasModel.setGridType(type);
+  }
+
+  void setGridColor(Color color) {
+    _canvasModel.setGridColor(color);
+  }
+
+  void setGridSpacing(double spacing) {
+    _canvasModel.setGridSpacing(spacing);
   }
 }
 

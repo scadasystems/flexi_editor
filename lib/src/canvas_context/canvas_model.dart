@@ -1,12 +1,20 @@
 import 'dart:collection';
 
 import 'package:flexi_editor/flexi_editor.dart';
+import 'package:flexi_editor/src/canvas_context/model/connection.dart';
 import 'package:flexi_editor/src/canvas_context/model/flexi_data.dart';
+import 'package:flexi_editor/src/canvas_context/model/grid_type.dart';
 import 'package:flutter/material.dart';
 
 class CanvasModel with ChangeNotifier {
   HashMap<String, Component> components = HashMap();
+  HashMap<String, Connection> connections = HashMap();
   PolicySet policySet;
+
+  // 그리드 설정
+  GridType gridType = GridType.line;
+  Color gridColor = Colors.grey.withOpacity(0.3);
+  double gridSpacing = 40.0;
 
   CanvasModel(this.policySet);
 
@@ -21,6 +29,7 @@ class CanvasModel with ChangeNotifier {
 
     return FlexiData(
       components: components.values.toList(),
+      connections: connections.values.toList(),
     );
   }
 
@@ -57,11 +66,17 @@ class CanvasModel with ChangeNotifier {
 
   void removeComponent(String id) {
     components.remove(id);
+    // 컴포넌트 삭제 시 관련된 연결선도 삭제
+    connections.removeWhere(
+      (key, value) =>
+          value.sourceComponentId == id || value.targetComponentId == id,
+    );
     notifyListeners();
   }
 
   void removeAllComponents() {
     components.clear();
+    connections.clear();
     notifyListeners();
   }
 
@@ -92,5 +107,36 @@ class CanvasModel with ChangeNotifier {
     getComponent(componentId).zOrder = zOrderMin - 1;
     notifyListeners();
     return zOrderMin - 1;
+  }
+
+  // 연결선 관련 메서드
+  void addConnection(Connection connection) {
+    connections[connection.id] = connection;
+    notifyListeners();
+  }
+
+  void removeConnection(String id) {
+    connections.remove(id);
+    notifyListeners();
+  }
+
+  Connection getConnection(String id) {
+    return connections[id]!;
+  }
+
+  // 그리드 설정 관련 메서드
+  void setGridType(GridType type) {
+    gridType = type;
+    notifyListeners();
+  }
+
+  void setGridColor(Color color) {
+    gridColor = color;
+    notifyListeners();
+  }
+
+  void setGridSpacing(double spacing) {
+    gridSpacing = spacing;
+    notifyListeners();
   }
 }

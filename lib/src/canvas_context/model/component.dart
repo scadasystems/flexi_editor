@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flexi_editor/src/canvas_context/model/port_type.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,10 @@ class Component<T> with ChangeNotifier {
   String? parentId;
   final List<String> childrenIds;
   T? data;
+
+  // 포트 관련 필드
+  bool showPort = true;
+  Map<PortType, bool>? showPorts;
 
   // 그룹 관련 필드
   String? groupId;
@@ -32,6 +37,8 @@ class Component<T> with ChangeNotifier {
     List<String>? childrenIds,
     this.data,
     this.locked = false,
+    this.showPort = true,
+    this.showPorts,
     this.groupId,
     this.groupName,
     this.groupCollapsed = false,
@@ -60,22 +67,22 @@ class Component<T> with ChangeNotifier {
     notifyListeners();
   }
 
-  Offset getPortPosition(String portName) {
-    switch (portName) {
-      case 'top':
-        return position + Offset(size.width / 2, 0);
-      case 'bottom':
-        return position + Offset(size.width / 2, size.height);
-      case 'left':
-        return position + Offset(0, size.height / 2);
-      case 'right':
-        return position + Offset(size.width, size.height / 2);
-      default:
-        return position + size.center(Offset.zero);
+  Offset getPortPosition(PortType portType) {
+    switch (portType) {
+      case PortType.top:
+        return position + getPointOnComponent(Alignment.topCenter);
+      case PortType.bottom:
+        return position + getPointOnComponent(Alignment.bottomCenter);
+      case PortType.left:
+        return position + getPointOnComponent(Alignment.centerLeft);
+      case PortType.right:
+        return position + getPointOnComponent(Alignment.centerRight);
     }
   }
 
   Offset getPointOnComponent(Alignment alignment) {
+    // Alignment 좌표계: (-1.0, -1.0) ~ (1.0, 1.0)
+    // 0.0 ~ 1.0 범위로 변환: (alignment.x + 1) / 2
     return Offset(
       size.width * ((alignment.x + 1) / 2),
       size.height * ((alignment.y + 1) / 2),
@@ -116,6 +123,21 @@ class Component<T> with ChangeNotifier {
     notifyListeners();
   }
 
+  void setShowPort(bool show) {
+    showPort = show;
+    notifyListeners();
+  }
+
+  void setShowPorts(Map<PortType, bool>? ports) {
+    showPorts = ports;
+    notifyListeners();
+  }
+
+  bool isPortVisible(PortType type) {
+    if (!showPort) return false;
+    return showPorts?[type] ?? true;
+  }
+
   bool get isScreen => type == 'screen';
   bool get hasParent => parentId != null;
   bool get hasChildren => childrenIds.isNotEmpty;
@@ -137,6 +159,12 @@ class Component<T> with ChangeNotifier {
           json['dynamic_data'] ?? {},
         ),
         locked = json['locked'] ?? false,
+        showPort = json['show_port'] ?? true,
+        showPorts = json['show_ports'] != null
+            ? (json['show_ports'] as Map<String, dynamic>).map(
+                (key, value) => MapEntry(PortType.values.byName(key), value),
+              )
+            : null,
         groupId = json['group_id'],
         groupName = json['group_name'],
         groupCollapsed = json['group_collapsed'] ?? false;
@@ -152,6 +180,11 @@ class Component<T> with ChangeNotifier {
         if (childrenIds.isNotEmpty) 'children_ids': childrenIds,
         if (data != null) 'dynamic_data': (data as dynamic)?.toJson(),
         if (locked) 'locked': locked,
+        'show_port': showPort,
+        if (showPorts != null)
+          'show_ports': showPorts!.map(
+            (key, value) => MapEntry(key.name, value),
+          ),
         if (groupId != null) 'group_id': groupId,
         if (groupName != null) 'group_name': groupName,
         if (groupCollapsed) 'group_collapsed': groupCollapsed,
@@ -167,6 +200,8 @@ class Component<T> with ChangeNotifier {
     int? zOrder,
     T? data,
     bool replaceData = false,
+    bool? showPort,
+    Map<PortType, bool>? showPorts,
   }) {
     final component = Component<T>(
       id: id ?? this.id,
@@ -177,6 +212,8 @@ class Component<T> with ChangeNotifier {
       zOrder: zOrder ?? this.zOrder,
       parentId: parentId ?? this.parentId,
       data: replaceData ? data : (data ?? this.data),
+      showPort: showPort ?? this.showPort,
+      showPorts: showPorts ?? this.showPorts,
     );
 
     return component;
