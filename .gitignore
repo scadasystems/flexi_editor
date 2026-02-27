@@ -302,3 +302,5 @@ fabric.properties
 !/gradle/wrapper/gradle-wrapper.jar
 
 example/pubspec.lock
+
+.trae/
