@@ -14,7 +14,7 @@ dependencies:
   
   defer_pointer: ^0.0.2
   provider: ^6.1.5+1
-  uuid: ^4.5.2
+  uuid: ^4.5.3
 
 dev_dependencies:
   flutter_test:

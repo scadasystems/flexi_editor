@@ -10,6 +10,20 @@
       "request": "launch",
       "program": "example/lib/main.dart",
       "args": ["-d", "chrome"]
+    },
+    {
+      "name": "Web-Server",
+      "type": "dart",
+      "request": "launch",
+      "program": "example/lib/main.dart",
+      "args": [
+        "-d",
+        "web-server",
+        "--web-port",
+        "1123",
+        "--web-hostname",
+        "localhost"
+      ]
     }
   ]
 }
