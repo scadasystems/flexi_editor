@@ -1,7 +1,6 @@
 import 'package:flexi_editor/flexi_editor.dart';
 import 'package:flexi_editor/src/utils/painter/link_joint_painter.dart';
 import 'package:flexi_editor/src/utils/painter/link_painter.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,7 +17,7 @@ class Link extends StatelessWidget {
     final linkData = Provider.of<LinkData>(context);
     final canvasState = Provider.of<CanvasState>(context);
 
-    LinkPainter linkPainter = LinkPainter(
+    final linkPainter = LinkPainter(
       linkPoints: (linkData.linkPoints.map(
         (point) => point * canvasState.scale + canvasState.position,
       )).toList(),
@@ -27,7 +26,7 @@ class Link extends StatelessWidget {
     );
 
     return Listener(
-      onPointerSignal: (PointerSignalEvent event) =>
+      onPointerSignal: (event) =>
           policy.onLinkPointerSignal(linkData.id, event),
       child: GestureDetector(
         onTap: () => policy.onLinkTap(linkData.id),
@@ -56,7 +55,7 @@ class Link extends StatelessWidget {
                   .getRange(1, linkData.linkPoints.length - 1)
                   .map(
                 (jointPoint) {
-                  var index = linkData.linkPoints.indexOf(jointPoint);
+                  final index = linkData.linkPoints.indexOf(jointPoint);
 
                   return GestureDetector(
                     onTap: () => policy.onLinkJointTap(index, linkData.id),

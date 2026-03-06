@@ -15,7 +15,7 @@ class LinkJointPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    var paint = Paint()
+    final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
@@ -27,7 +27,7 @@ class LinkJointPainter extends CustomPainter {
 
   @override
   bool hitTest(Offset position) {
-    Path path = Path();
+    final Path path = Path();
     path.addOval(
       Rect.fromCircle(
         center: location,

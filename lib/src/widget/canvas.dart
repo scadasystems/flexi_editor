@@ -226,6 +226,18 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
             fit: StackFit.expand,
             children: [
               _buildCanvasClickable(event),
+              if (state.dottedBackground.enabled)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: DottedGridPainter(
+                        canvasPosition: state.position,
+                        canvasScale: state.scale,
+                        config: state.dottedBackground,
+                      ),
+                    ),
+                  ),
+                ),
               ...showComponents(model),
               ...buildComponentOverWidget(model),
               ...widget.policy.showCustomWidgetsOnCanvasBackground(context),

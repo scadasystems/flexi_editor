@@ -79,13 +79,13 @@ class ComponentHighlightPainter extends CustomPainter {
         type == ComponentHighlightPainterType.solid) {
       canvas.drawRRect(rect, paint);
     } else {
-      Path path = Path()..addRRect(rect);
-      Path dashedPath = Path();
-      var pathMetrics = path.computeMetrics().toList();
-      for (var metric in pathMetrics) {
+      final Path path = Path()..addRRect(rect);
+      final Path dashedPath = Path();
+      final pathMetrics = path.computeMetrics().toList();
+      for (final metric in pathMetrics) {
         var pathLength = 0.0;
         while (pathLength < metric.length) {
-          var extractPath =
+          final extractPath =
               metric.extractPath(pathLength, pathLength + dashWidth);
           dashedPath.addPath(extractPath, Offset.zero);
           pathLength += dashWidth + dashSpace;

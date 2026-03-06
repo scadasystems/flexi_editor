@@ -42,8 +42,8 @@ class VectorUtils {
 
   static Path getRectAroundLine(
       Offset point1, Offset point2, double rectWidth) {
-    Path path = Path();
-    Offset perpendicularNormalizedVector = VectorUtils.normalizeVector(
+    final Path path = Path();
+    final Offset perpendicularNormalizedVector = VectorUtils.normalizeVector(
           VectorUtils.getPerpendicularVector(point1, point2),
         ) *
         rectWidth;

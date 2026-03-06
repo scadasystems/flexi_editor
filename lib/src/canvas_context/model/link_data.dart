@@ -83,10 +83,10 @@ class LinkData<T> with ChangeNotifier {
     double canvasScale,
   ) {
     for (int i = 0; i < linkPoints.length - 1; i++) {
-      var point1 = linkPoints[i] * canvasScale + canvasPosition;
-      var point2 = linkPoints[i + 1] * canvasScale + canvasPosition;
+      final point1 = linkPoints[i] * canvasScale + canvasPosition;
+      final point2 = linkPoints[i + 1] * canvasScale + canvasPosition;
 
-      Path rect = VectorUtils.getRectAroundLine(
+      final Path rect = VectorUtils.getRectAroundLine(
         point1,
         point2,
         canvasScale * (linkStyle.lineWidth + LinkConstants.hitTestTolerance),

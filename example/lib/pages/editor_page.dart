@@ -20,6 +20,7 @@ class _EditorPageState extends State<EditorPage> {
   late final EditorController _controller;
   late final ExamplePolicySet _policySet;
   late final FlexiEditorContext _editorContext;
+  late final CanvasUndoRedoController _undoRedoController;
 
   String? _draftComponentId;
   Rect? _lastDragRect;
@@ -28,8 +29,16 @@ class _EditorPageState extends State<EditorPage> {
   void initState() {
     super.initState();
     _controller = EditorController();
-    _policySet = ExamplePolicySet(controller: _controller);
+    _undoRedoController = CanvasUndoRedoController();
+    _policySet = ExamplePolicySet(
+      controller: _controller,
+      undoRedoController: _undoRedoController,
+    );
     _editorContext = FlexiEditorContext(_policySet);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
+    });
   }
 
   @override
@@ -76,6 +85,9 @@ class _EditorPageState extends State<EditorPage> {
       if (!finalized) {
         if (_editorContext.canvasModel.componentExists(id)) {
           _editorContext.canvasModel.removeComponent(id);
+          _undoRedoController.commit(
+            reader: _editorContext.policySet.canvasReader,
+          );
         }
         return;
       }
@@ -83,6 +95,7 @@ class _EditorPageState extends State<EditorPage> {
       _controller
         ..selectSingleComponent(id)
         ..setTool(EditorTool.select);
+      _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
 
       return;
     }
@@ -146,6 +159,26 @@ class _EditorPageState extends State<EditorPage> {
     final isCtrl = HardwareKeyboard.instance.isControlPressed;
     final isCmdOrCtrl = isMeta || isCtrl;
 
+    if (isCmdOrCtrl && key == LogicalKeyboardKey.keyZ) {
+      final didUndo = _undoRedoController.undo(
+        reader: _editorContext.policySet.canvasReader,
+        writer: _editorContext.policySet.canvasWriter,
+        decodeCustomComponentData: _decodeEditorShapeData,
+      );
+      if (didUndo) _controller.clearSelection();
+      return;
+    }
+
+    if (isCmdOrCtrl && key == LogicalKeyboardKey.keyY) {
+      final didRedo = _undoRedoController.redo(
+        reader: _editorContext.policySet.canvasReader,
+        writer: _editorContext.policySet.canvasWriter,
+        decodeCustomComponentData: _decodeEditorShapeData,
+      );
+      if (didRedo) _controller.clearSelection();
+      return;
+    }
+
     if (key == LogicalKeyboardKey.escape) {
       _controller
         ..clearPendingConnector()
@@ -159,10 +192,12 @@ class _EditorPageState extends State<EditorPage> {
     }
 
     if (key == LogicalKeyboardKey.delete || key == LogicalKeyboardKey.backspace) {
+      var changed = false;
       final selectedLinkId = _controller.selectedLinkId;
       if (selectedLinkId != null &&
           _editorContext.canvasModel.linkExists(selectedLinkId)) {
         _editorContext.canvasModel.removeLink(selectedLinkId);
+        changed = true;
       }
 
       final selectedComponentIds =
@@ -172,11 +207,25 @@ class _EditorPageState extends State<EditorPage> {
           _editorContext.policySet.canvasWriter.model.removeComponentWithChildren(
             id,
           );
+          changed = true;
         }
       }
 
       _controller.clearSelection();
+      if (changed) {
+        _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
+      }
     }
+  }
+
+  dynamic _decodeEditorShapeData(Map<String, dynamic> json) {
+    return EditorShapeData(
+      fillColorValue: json['fill'] as int? ?? 0xFFFFFFFF,
+      strokeColorValue: json['stroke'] as int? ?? 0xFF111827,
+      strokeWidth: (json['strokeWidth'] as num?)?.toDouble() ?? 1,
+      cornerRadius: (json['cornerRadius'] as num?)?.toDouble() ?? 12,
+      rotationRadians: (json['rotationRadians'] as num?)?.toDouble() ?? 0,
+    );
   }
 
   @override
@@ -192,7 +241,26 @@ class _EditorPageState extends State<EditorPage> {
               Expanded(
                 child: Column(
                   children: [
-                    _TopBar(editorContext: _editorContext),
+                    _TopBar(
+                      editorContext: _editorContext,
+                      undoRedoController: _undoRedoController,
+                      onUndo: () {
+                        final didUndo = _undoRedoController.undo(
+                          reader: _editorContext.policySet.canvasReader,
+                          writer: _editorContext.policySet.canvasWriter,
+                          decodeCustomComponentData: _decodeEditorShapeData,
+                        );
+                        if (didUndo) _controller.clearSelection();
+                      },
+                      onRedo: () {
+                        final didRedo = _undoRedoController.redo(
+                          reader: _editorContext.policySet.canvasReader,
+                          writer: _editorContext.policySet.canvasWriter,
+                          decodeCustomComponentData: _decodeEditorShapeData,
+                        );
+                        if (didRedo) _controller.clearSelection();
+                      },
+                    ),
                     Expanded(
                       child: Padding(
                         padding: const .all(12),
@@ -227,8 +295,16 @@ class _EditorPageState extends State<EditorPage> {
 
 class _TopBar extends StatelessWidget {
   final FlexiEditorContext editorContext;
+  final CanvasUndoRedoController undoRedoController;
+  final VoidCallback onUndo;
+  final VoidCallback onRedo;
 
-  const _TopBar({required this.editorContext});
+  const _TopBar({
+    required this.editorContext,
+    required this.undoRedoController,
+    required this.onUndo,
+    required this.onRedo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -272,6 +348,26 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  AnimatedBuilder(
+                    animation: undoRedoController,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: undoRedoController.canUndo ? onUndo : null,
+                            icon: const Icon(Icons.undo),
+                            tooltip: 'Undo',
+                          ),
+                          IconButton(
+                            onPressed: undoRedoController.canRedo ? onRedo : null,
+                            icon: const Icon(Icons.redo),
+                            tooltip: 'Redo',
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                   if (!isCompact)
                     AnimatedBuilder(
                       animation: editorContext.canvasState,

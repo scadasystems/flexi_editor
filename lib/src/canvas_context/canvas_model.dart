@@ -14,14 +14,14 @@ class CanvasModel with ChangeNotifier {
   CanvasModel(this.policySet);
 
   FlexiData getFlexi() {
-    for (var component in components.values) {
+    for (final component in components.values) {
       if (!_hasToJsonMethodAtComponent(component)) {
         throw ArgumentError(
             'ComponentData.data does not have a toJson() method.');
       }
     }
 
-    for (var link in links.values) {
+    for (final link in links.values) {
       if (!_hasToJsonMethodAtLink(link)) {
         throw ArgumentError('LinkData.data does not have a toJson() method.');
       }
@@ -94,7 +94,7 @@ class CanvasModel with ChangeNotifier {
   void removeComponentConnections(String id) {
     assert(components.keys.contains(id));
 
-    List<String> linksToRemove = [];
+    final List<String> linksToRemove = [];
 
     getComponent(id).connections.forEach((connection) {
       linksToRemove.add(connection.connectionId);
@@ -163,9 +163,9 @@ class CanvasModel with ChangeNotifier {
     LinkStyle? linkStyle,
     dynamic data,
   ) {
-    var linkId = _uuid.v4();
-    var sourceComponent = getComponent(sourceComponentId);
-    var targetComponent = getComponent(targetComponentId);
+    final linkId = _uuid.v4();
+    final sourceComponent = getComponent(sourceComponentId);
+    final targetComponent = getComponent(targetComponentId);
 
     sourceComponent.addConnection(
       ConnectionOut(
@@ -180,11 +180,11 @@ class CanvasModel with ChangeNotifier {
       ),
     );
 
-    var sourceLinkAlignment = policySet.getLinkEndpointAlignment(
+    final sourceLinkAlignment = policySet.getLinkEndpointAlignment(
       sourceComponent,
       targetComponent.position + targetComponent.size.center(Offset.zero),
     );
-    var targetLinkAlignment = policySet.getLinkEndpointAlignment(
+    final targetLinkAlignment = policySet.getLinkEndpointAlignment(
       targetComponent,
       sourceComponent.position + sourceComponent.size.center(Offset.zero),
     );
@@ -210,9 +210,9 @@ class CanvasModel with ChangeNotifier {
   void updateLinks(String componentId) {
     assert(componentExists(componentId),
         'model does not contain this component id: $componentId');
-    var component = getComponent(componentId);
+    final component = getComponent(componentId);
     for (final connection in component.connections) {
-      var link = getLink(connection.connectionId);
+      final link = getLink(connection.connectionId);
 
       Component sourceComponent = component;
       var targetComponent = getComponent(connection.otherComponentId);
@@ -227,9 +227,9 @@ class CanvasModel with ChangeNotifier {
         throw ArgumentError('Invalid port connection.');
       }
 
-      Alignment firstLinkAlignment =
+      final Alignment firstLinkAlignment =
           _getLinkEndpointAlignment(sourceComponent, targetComponent, link, 1);
-      Alignment secondLinkAlignment = _getLinkEndpointAlignment(
+      final Alignment secondLinkAlignment = _getLinkEndpointAlignment(
           targetComponent, sourceComponent, link, link.linkPoints.length - 2);
 
       _setLinkEndpoints(link, sourceComponent, targetComponent,

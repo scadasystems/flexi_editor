@@ -61,7 +61,7 @@ class LinkPainter extends CustomPainter {
 
   @override
   bool hitTest(Offset position) {
-    Path path = makeWiderLinePath(scale * (5 + linkStyle.lineWidth));
+    final Path path = makeWiderLinePath(scale * (5 + linkStyle.lineWidth));
     return path.contains(position);
   }
 
@@ -117,10 +117,10 @@ class LinkPainter extends CustomPainter {
   }
 
   Path makeWiderLinePath(double hitAreaWidth) {
-    Path path = Path();
+    final Path path = Path();
     for (int i = 0; i < linkPoints.length - 1; i++) {
-      var point1 = linkPoints[i];
-      var point2 = linkPoints[i + 1];
+      final point1 = linkPoints[i];
+      final point2 = linkPoints[i + 1];
 
       // DEBUG:
       // if (i == 0)

@@ -41,14 +41,14 @@ mixin CanvasControlPolicy on BasePolicySet {
       _animationController?.repeat();
     }
 
-    double previousScale = transformScale;
+    final double previousScale = transformScale;
 
     // Position and scale transformation
     transformPosition += details.focalPoint - _lastFocalPoint;
     transformScale = keepScaleInBounds(details.scale, _baseScale);
 
-    var focalPoint = (details.localFocalPoint - transformPosition);
-    var focalPointScaled = focalPoint * (transformScale / previousScale);
+    final focalPoint = (details.localFocalPoint - transformPosition);
+    final focalPointScaled = focalPoint * (transformScale / previousScale);
 
     _lastFocalPoint = details.focalPoint;
 
@@ -90,7 +90,7 @@ mixin CanvasControlPolicy on BasePolicySet {
           _handleTrackpadPinch(event);
         } else {
           // 트랙패드 두 손가락 스크롤 → 캔버스 이동
-          Offset panDelta = event.scrollDelta;
+          final Offset panDelta = event.scrollDelta;
           canvasWriter.state.updatePosition(-panDelta);
           canvasWriter.state.updateCanvas();
         }
@@ -99,7 +99,7 @@ mixin CanvasControlPolicy on BasePolicySet {
         _handleMouseScrollZoom(event);
       } else {
         // 기타 장치는 기본 동작 (캔버스 이동)
-        Offset panDelta = event.scrollDelta;
+        final Offset panDelta = event.scrollDelta;
         canvasWriter.state.updatePosition(-panDelta);
         canvasWriter.state.updateCanvas();
       }
@@ -125,16 +125,16 @@ mixin CanvasControlPolicy on BasePolicySet {
   }) {
     if (zoomFactor == 1.0) return;
 
-    double currentScale = canvasReader.state.scale;
-    double newScale = _clampScale(currentScale * zoomFactor);
+    final double currentScale = canvasReader.state.scale;
+    final double newScale = _clampScale(currentScale * zoomFactor);
 
     if (newScale != currentScale) {
-      Offset currentPosition = canvasReader.state.position;
+      final Offset currentPosition = canvasReader.state.position;
 
-      var relativeFocalPoint = (focalPoint - currentPosition);
-      var focalPointScaled = relativeFocalPoint * (newScale / currentScale);
+      final relativeFocalPoint = (focalPoint - currentPosition);
+      final focalPointScaled = relativeFocalPoint * (newScale / currentScale);
 
-      Offset newPosition =
+      final Offset newPosition =
           currentPosition + (relativeFocalPoint - focalPointScaled);
 
       canvasWriter.state.setScale(newScale);
@@ -192,18 +192,18 @@ mixin CanvasControlPolicy on BasePolicySet {
   }
 
   void _handleScaleGesture(double scaleValue, Offset focalPoint) {
-    double scaleChange =
+    final double scaleChange =
         keepScaleInBounds(scaleValue, canvasReader.state.scale);
 
     if (scaleChange == 0.0) return;
 
-    double previousScale = canvasReader.state.scale;
-    Offset previousPosition = canvasReader.state.position;
+    final double previousScale = canvasReader.state.scale;
+    final Offset previousPosition = canvasReader.state.position;
 
     canvasWriter.state.updateScale(scaleChange);
 
-    var relativeFocalPoint = (focalPoint - previousPosition);
-    var focalPointScaled =
+    final relativeFocalPoint = (focalPoint - previousPosition);
+    final focalPointScaled =
         relativeFocalPoint * (canvasReader.state.scale / previousScale);
 
     canvasWriter.state.updatePosition(relativeFocalPoint - focalPointScaled);

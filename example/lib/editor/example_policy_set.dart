@@ -19,12 +19,19 @@ class ExamplePolicySet extends PolicySet
         LinkJointControlPolicy,
         LinkAttachmentRectPolicy {
   final EditorController controller;
+  final CanvasUndoRedoController undoRedoController;
 
-  ExamplePolicySet({required this.controller});
+  ExamplePolicySet({
+    required this.controller,
+    required this.undoRedoController,
+  });
 
   @override
   void initializeEditor() {
     canvasWriter.state.setCanvasColor(const Color(0xFFF7F7F8));
+    canvasWriter.state.setDottedBackground(
+      const CanvasDottedBackgroundConfig(enabled: true, snapThresholdCanvas: 4),
+    );
     canvasWriter.state.setMinScale(0.1);
     canvasWriter.state.setMaxScale(8);
   }
@@ -63,6 +70,7 @@ class ExamplePolicySet extends PolicySet
       controller
         ..clearPendingConnector()
         ..selectLink(linkId);
+      undoRedoController.commit(reader: canvasReader);
       return;
     }
 
@@ -74,11 +82,43 @@ class ExamplePolicySet extends PolicySet
   @override
   void onComponentScaleUpdate(String componentId, ScaleUpdateDetails details) {
     if (controller.tool != EditorTool.select) return;
-    if (details.focalPointDelta == Offset.zero) return;
-    canvasWriter.model.moveComponentWithChildren(
-      componentId,
-      details.focalPointDelta,
+    final deltaScreen = details.focalPointDelta;
+    if (deltaScreen == Offset.zero) return;
+
+    final state = canvasReader.state;
+    final dotted = state.dottedBackground;
+    if (!dotted.enabled || dotted.gridSpacingCanvas <= 0) {
+      canvasWriter.model.moveComponentWithChildren(componentId, deltaScreen);
+      return;
+    }
+
+    final component = canvasReader.model.getComponent(componentId);
+    final currentPos = component.position;
+    final scale = state.scale;
+    if (scale <= 0) return;
+
+    final deltaCanvas = Offset(deltaScreen.dx / scale, deltaScreen.dy / scale);
+    final candidate = currentPos + deltaCanvas;
+
+    final spacing = dotted.gridSpacingCanvas;
+    final snapped = Offset(
+      (candidate.dx / spacing).round() * spacing,
+      (candidate.dy / spacing).round() * spacing,
     );
+
+    final target = (candidate - snapped).distance <= dotted.snapThresholdCanvas
+        ? snapped
+        : candidate;
+
+    final finalDeltaCanvas = target - currentPos;
+    final finalDeltaScreen = finalDeltaCanvas * scale;
+    canvasWriter.model.moveComponentWithChildren(componentId, finalDeltaScreen);
+  }
+
+  @override
+  void onComponentScaleEnd(String componentId, ScaleEndDetails details) {
+    if (controller.tool != EditorTool.select) return;
+    undoRedoController.commit(reader: canvasReader);
   }
 
   @override

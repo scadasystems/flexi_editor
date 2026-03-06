@@ -33,7 +33,7 @@ class CanvasModelWriter extends ModelWriter
   void removeComponentWithChildren(String componentId) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
-    List<String> componentsToRemove = [];
+    final List<String> componentsToRemove = [];
     _removeComponentWithChildren(componentId, componentsToRemove);
     componentsToRemove.reversed.forEach(removeComponent);
   }
@@ -142,7 +142,7 @@ mixin ComponentWriter on ModelWriter {
   int moveComponentToTheFrontWithChildren(String componentId) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
-    int zOrder = moveComponentToTheFront(componentId);
+    final int zOrder = moveComponentToTheFront(componentId);
     _setZOrderToChildren(componentId, zOrder);
     return zOrder;
   }
@@ -165,7 +165,7 @@ mixin ComponentWriter on ModelWriter {
   int moveComponentToTheBackWithChildren(String componentId) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
-    int zOrder = moveComponentToTheBack(componentId);
+    final int zOrder = moveComponentToTheBack(componentId);
     _setZOrderToChildren(componentId, zOrder);
     return zOrder;
   }

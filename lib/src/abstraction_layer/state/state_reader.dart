@@ -1,4 +1,5 @@
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_dotted_background_config.dart';
 import 'package:flexi_editor/src/canvas_context/model/component.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +19,9 @@ class CanvasStateReader {
   double get minScale => canvasState.minScale;
 
   Color get color => canvasState.color;
+
+  CanvasDottedBackgroundConfig get dottedBackground =>
+      canvasState.dottedBackground;
 
   Offset fromCanvasCoordinates(Offset position) {
     return canvasState.fromCanvasCoordinates(position);

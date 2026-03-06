@@ -14,7 +14,7 @@ mixin LinkAttachmentOvalPolicy implements LinkAttachmentPolicy {
       pointPosition.dy / componentData.size.height,
     );
 
-    Offset pointAlignment = pointPosition / pointPosition.distance;
+    final Offset pointAlignment = pointPosition / pointPosition.distance;
 
     return Alignment(pointAlignment.dx, pointAlignment.dy);
   }

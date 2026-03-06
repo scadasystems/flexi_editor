@@ -113,6 +113,16 @@ class _RotateHandleState extends State<_RotateHandle> {
                 shapeData.copyWith(rotationRadians: angle),
               );
             },
+            onPanEnd: (details) {
+              widget.policy.undoRedoController.commit(
+                reader: widget.policy.canvasReader,
+              );
+            },
+            onPanCancel: () {
+              widget.policy.undoRedoController.commit(
+                reader: widget.policy.canvasReader,
+              );
+            },
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFFFF),
@@ -126,4 +136,3 @@ class _RotateHandleState extends State<_RotateHandle> {
     );
   }
 }
-

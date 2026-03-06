@@ -98,7 +98,7 @@ class LinkStyle {
     double scale,
     double pointed,
   ) {
-    Offset left = point2 +
+    final Offset left = point2 +
         VectorUtils.normalizeVector(
               VectorUtils.getPerpendicularVector(point1, point2),
             ) *
@@ -110,7 +110,7 @@ class LinkStyle {
             pointed *
             arrowSize *
             scale;
-    Offset right = point2 -
+    final Offset right = point2 -
         VectorUtils.normalizeVector(
               VectorUtils.getPerpendicularVector(point1, point2),
             ) *
@@ -123,7 +123,7 @@ class LinkStyle {
             arrowSize *
             scale;
 
-    Path path = Path();
+    final Path path = Path();
 
     path.moveTo(point2.dx, point2.dy);
     path.lineTo(left.dx, left.dy);
@@ -140,11 +140,11 @@ class LinkStyle {
     double scale,
     bool isCenter,
   ) {
-    Path path = Path();
+    final Path path = Path();
     if (isCenter) {
       path.addOval(Rect.fromCircle(center: point2, radius: scale * arrowSize));
     } else {
-      Offset circleCenter = point2 -
+      final Offset circleCenter = point2 -
           VectorUtils.normalizeVector(
                 VectorUtils.getDirectionVector(point1, point2),
               ) *
@@ -163,8 +163,8 @@ class LinkStyle {
     Offset point2,
     double scale,
   ) {
-    Path path = Path();
-    Offset circleCenter = point2 -
+    final Path path = Path();
+    final Offset circleCenter = point2 -
         VectorUtils.normalizeVector(
               VectorUtils.getDirectionVector(point1, point2),
             ) *
@@ -179,7 +179,7 @@ class LinkStyle {
   }
 
   double getEndShortening(ArrowType arrowType) {
-    double eps = 0.05;
+    final double eps = 0.05;
     switch (arrowType) {
       case ArrowType.none:
         return 0;
@@ -197,7 +197,7 @@ class LinkStyle {
   }
 
   Path getSolidLinePath(Offset point1, Offset point2) {
-    Path path = Path();
+    final Path path = Path();
     path.moveTo(point1.dx, point1.dy);
     path.lineTo(point2.dx, point2.dy);
     return path;
@@ -210,16 +210,16 @@ class LinkStyle {
     double dashLength,
     double dashSpace,
   ) {
-    Path path = Path();
+    final Path path = Path();
 
-    Offset normalized = VectorUtils.normalizeVector(
+    final Offset normalized = VectorUtils.normalizeVector(
       VectorUtils.getDirectionVector(point1, point2),
     );
-    double lineDistance = (point2 - point1).distance;
+    final double lineDistance = (point2 - point1).distance;
     Offset currentPoint = Offset(point1.dx, point1.dy);
 
-    double dash = dashLength * scale;
-    double space = dashSpace * scale;
+    final double dash = dashLength * scale;
+    final double space = dashSpace * scale;
     double currentDistance = 0;
     while (currentDistance < lineDistance) {
       path.moveTo(currentPoint.dx, currentPoint.dy);

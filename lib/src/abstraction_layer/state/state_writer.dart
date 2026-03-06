@@ -1,4 +1,5 @@
 import 'package:flexi_editor/src/canvas_context/canvas_state.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_dotted_background_config.dart';
 import 'package:flutter/material.dart';
 
 class CanvasStateWriter {
@@ -47,6 +48,17 @@ class CanvasStateWriter {
   /// Sets the base color of the canvas.
   void setCanvasColor(Color color) {
     _canvasState.color = color;
+  }
+
+  void setDottedBackground(CanvasDottedBackgroundConfig config) {
+    _canvasState.dottedBackground = config;
+    _canvasState.updateCanvas();
+  }
+
+  void setDottedBackgroundEnabled(bool enabled) {
+    _canvasState.dottedBackground =
+        _canvasState.dottedBackground.copyWith(enabled: enabled);
+    _canvasState.updateCanvas();
   }
 
   /// Sets the maximal possible scale of the canvas.

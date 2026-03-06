@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flexi_editor/src/canvas_context/model/component.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_dotted_background_config.dart';
 
 class CanvasState with ChangeNotifier {
   Offset _position = const Offset(0, 0);
@@ -11,6 +12,9 @@ class CanvasState with ChangeNotifier {
   double minScale = 0.1;
 
   Color color = Colors.white;
+
+  CanvasDottedBackgroundConfig dottedBackground =
+      const CanvasDottedBackgroundConfig();
 
   GlobalKey canvasGlobalKey = GlobalKey();
 
