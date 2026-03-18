@@ -1,3 +1,0 @@
-- [x] 회전 핸들이 리사이즈 핸들/하이라이트와 함께 회전한다
-- [x] Shift 스냅(45도 단위)과 회전 점프 방지가 유지된다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

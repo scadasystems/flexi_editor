@@ -81,6 +81,16 @@ class CanvasModelWriter extends ModelWriter
 }
 
 mixin ComponentWriter on ModelWriter {
+  void _updateLinksRecursively(String componentId) {
+    _canvasModel.updateLinks(componentId);
+    final component = _canvasModel.getComponent(componentId);
+    for (final childId in component.childrenIds) {
+      if (_canvasModel.componentExists(childId)) {
+        _updateLinksRecursively(childId);
+      }
+    }
+  }
+
   void updateComponent(String? componentId) {
     if (componentId == null) return;
     assert(_canvasModel.componentExists(componentId),
@@ -92,7 +102,7 @@ mixin ComponentWriter on ModelWriter {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
     _canvasModel.getComponent(componentId).setPosition(position);
-    _canvasModel.updateLinks(componentId);
+    _updateLinksRecursively(componentId);
   }
 
   void moveComponent(String componentId, Offset offset,
@@ -102,7 +112,7 @@ mixin ComponentWriter on ModelWriter {
     _canvasModel
         .getComponent(componentId)
         .move(offset / (withScale ? _canvasState.scale : 1));
-    _canvasModel.updateLinks(componentId);
+    _updateLinksRecursively(componentId);
   }
 
   void moveComponentWithChildren(String componentId, Offset offset,
@@ -110,9 +120,6 @@ mixin ComponentWriter on ModelWriter {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
     moveComponent(componentId, offset, withScale: withScale);
-    _canvasModel.getComponent(componentId).childrenIds.forEach((childId) {
-      moveComponentWithChildren(childId, offset);
-    });
   }
 
   void removeComponentConnections(String componentId) {
@@ -124,13 +131,25 @@ mixin ComponentWriter on ModelWriter {
   void updateComponentLinks(String componentId) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
-    _canvasModel.updateLinks(componentId);
+    _updateLinksRecursively(componentId);
   }
 
   void setComponentZOrder(String componentId, int zOrder) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
     _canvasModel.setComponentZOrder(componentId, zOrder);
+  }
+
+  void setComponentName(String componentId, String? name) {
+    assert(_canvasModel.componentExists(componentId),
+        'model does not contain this component id: $componentId');
+    _canvasModel.setComponentName(componentId, name);
+  }
+
+  void setComponentVisible(String componentId, bool visible) {
+    assert(_canvasModel.componentExists(componentId),
+        'model does not contain this component id: $componentId');
+    _canvasModel.setComponentVisible(componentId, visible);
   }
 
   int moveComponentToTheFront(String componentId) {
@@ -179,7 +198,35 @@ mixin ComponentWriter on ModelWriter {
   void setComponentSize(String componentId, Size size) {
     assert(_canvasModel.componentExists(componentId),
         'model does not contain this component id: $componentId');
-    _canvasModel.getComponent(componentId).setSize(size);
+    final component = _canvasModel.getComponent(componentId);
+    final oldSize = component.size;
+    component.setSize(size);
+    if (component.childrenIds.isNotEmpty &&
+        oldSize.width != 0 &&
+        oldSize.height != 0) {
+      final scaleX = size.width / oldSize.width;
+      final scaleY = size.height / oldSize.height;
+      _scaleChildrenRecursively(componentId, scaleX: scaleX, scaleY: scaleY);
+    }
+    _updateLinksRecursively(componentId);
+  }
+
+  void _scaleChildrenRecursively(
+    String parentId, {
+    required double scaleX,
+    required double scaleY,
+  }) {
+    final parent = _canvasModel.getComponent(parentId);
+    for (final childId in parent.childrenIds) {
+      if (!_canvasModel.componentExists(childId)) continue;
+      final child = _canvasModel.getComponent(childId);
+      child
+        ..setPosition(Offset(child.position.dx * scaleX, child.position.dy * scaleY))
+        ..setSize(Size(child.size.width * scaleX, child.size.height * scaleY));
+      if (child.childrenIds.isNotEmpty) {
+        _scaleChildrenRecursively(childId, scaleX: scaleX, scaleY: scaleY);
+      }
+    }
   }
 
   void setComponentParent(String componentId, String parentId) {
@@ -189,6 +236,56 @@ mixin ComponentWriter on ModelWriter {
     if (_checkParentChildLoop(componentId, parentId)) {
       _canvasModel.getComponent(componentId).setParent(parentId);
       _canvasModel.getComponent(parentId).addChild(componentId);
+    }
+    _canvasModel.updateCanvas();
+    _updateLinksRecursively(parentId);
+  }
+
+  void attachChild(
+    String parentId,
+    String childId, {
+    bool preserveWorldPosition = true,
+  }) {
+    assert(_canvasModel.componentExists(parentId),
+        'model does not contain this component id: $parentId');
+    assert(_canvasModel.componentExists(childId),
+        'model does not contain this component id: $childId');
+
+    final childWorldBefore = preserveWorldPosition
+        ? _canvasModel.getComponentWorldPosition(childId)
+        : null;
+
+    setComponentParent(childId, parentId);
+
+    if (preserveWorldPosition && childWorldBefore != null) {
+      final parentWorld = _canvasModel.getComponentWorldPosition(parentId);
+      final parent = _canvasModel.getComponent(parentId);
+      final local = childWorldBefore - parentWorld + parent.scrollOffset;
+      _canvasModel.getComponent(childId).setPosition(local);
+      _updateLinksRecursively(parentId);
+    }
+  }
+
+  void detachChild(
+    String childId, {
+    bool preserveWorldPosition = true,
+  }) {
+    assert(_canvasModel.componentExists(childId),
+        'model does not contain this component id: $childId');
+
+    final parentId = _canvasModel.getComponent(childId).parentId;
+    final childWorldBefore = preserveWorldPosition
+        ? _canvasModel.getComponentWorldPosition(childId)
+        : null;
+
+    removeComponentParent(childId);
+
+    if (preserveWorldPosition && childWorldBefore != null) {
+      _canvasModel.getComponent(childId).setPosition(childWorldBefore);
+      _updateLinksRecursively(childId);
+      if (parentId != null) {
+        _updateLinksRecursively(parentId);
+      }
     }
   }
 
@@ -209,6 +306,10 @@ mixin ComponentWriter on ModelWriter {
     if (parentId != null) {
       _canvasModel.getComponent(componentId).removeParent();
       _canvasModel.getComponent(parentId).removeChild(componentId);
+    }
+    _canvasModel.updateCanvas();
+    if (parentId != null) {
+      _updateLinksRecursively(parentId);
     }
   }
 

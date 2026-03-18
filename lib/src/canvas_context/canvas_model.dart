@@ -17,7 +17,8 @@ class CanvasModel with ChangeNotifier {
     for (final component in components.values) {
       if (!_hasToJsonMethodAtComponent(component)) {
         throw ArgumentError(
-            'ComponentData.data does not have a toJson() method.');
+          'ComponentData.data does not have a toJson() method.',
+        );
       }
     }
 
@@ -61,6 +62,40 @@ class CanvasModel with ChangeNotifier {
 
   Component getComponent(String id) {
     return components[id]!;
+  }
+
+  Offset getComponentWorldPosition(String componentId) {
+    final visited = HashSet<String>();
+    return _getComponentWorldPositionInternal(componentId, visited);
+  }
+
+  Rect getComponentWorldRect(String componentId) {
+    final component = getComponent(componentId);
+    final position = getComponentWorldPosition(componentId);
+    return Rect.fromLTWH(
+      position.dx,
+      position.dy,
+      component.size.width,
+      component.size.height,
+    );
+  }
+
+  Offset _getComponentWorldPositionInternal(
+    String componentId,
+    HashSet<String> visited,
+  ) {
+    if (!visited.add(componentId)) {
+      return components[componentId]?.position ?? Offset.zero;
+    }
+
+    final component = getComponent(componentId);
+    final parentId = component.parentId;
+    if (parentId == null) return component.position;
+    if (!componentExists(parentId)) return component.position;
+
+    final parentWorld = _getComponentWorldPositionInternal(parentId, visited);
+    final parent = getComponent(parentId);
+    return parentWorld + (component.position - parent.scrollOffset);
   }
 
   HashMap<String, Component> getAllComponents() {
@@ -112,6 +147,18 @@ class CanvasModel with ChangeNotifier {
 
   void setComponentZOrder(String componentId, int zOrder) {
     getComponent(componentId).zOrder = zOrder;
+    notifyListeners();
+  }
+
+  void setComponentName(String componentId, String? name) {
+    getComponent(componentId).setName(name);
+    notifyListeners();
+  }
+
+  void setComponentVisible(String componentId, bool visible) {
+    final component = getComponent(componentId);
+    if (component.visible == visible) return;
+    component.setVisible(visible);
     notifyListeners();
   }
 
@@ -180,13 +227,18 @@ class CanvasModel with ChangeNotifier {
       ),
     );
 
+    final sourceWorld = getComponentWorldPosition(sourceComponentId);
+    final targetWorld = getComponentWorldPosition(targetComponentId);
+    final sourceForAlign = sourceComponent.copyWith(position: sourceWorld);
+    final targetForAlign = targetComponent.copyWith(position: targetWorld);
+
     final sourceLinkAlignment = policySet.getLinkEndpointAlignment(
-      sourceComponent,
-      targetComponent.position + targetComponent.size.center(Offset.zero),
+      sourceForAlign,
+      targetWorld + targetComponent.size.center(Offset.zero),
     );
     final targetLinkAlignment = policySet.getLinkEndpointAlignment(
-      targetComponent,
-      sourceComponent.position + sourceComponent.size.center(Offset.zero),
+      targetForAlign,
+      sourceWorld + sourceComponent.size.center(Offset.zero),
     );
 
     links[linkId] = LinkData(
@@ -194,10 +246,8 @@ class CanvasModel with ChangeNotifier {
       sourceComponentId: sourceComponentId,
       targetComponentId: targetComponentId,
       linkPoints: [
-        sourceComponent.position +
-            sourceComponent.getPointOnComponent(sourceLinkAlignment),
-        targetComponent.position +
-            targetComponent.getPointOnComponent(targetLinkAlignment),
+        sourceWorld + sourceComponent.getPointOnComponent(sourceLinkAlignment),
+        targetWorld + targetComponent.getPointOnComponent(targetLinkAlignment),
       ],
       linkStyle: linkStyle ?? LinkStyle(),
       data: data,
@@ -208,8 +258,10 @@ class CanvasModel with ChangeNotifier {
   }
 
   void updateLinks(String componentId) {
-    assert(componentExists(componentId),
-        'model does not contain this component id: $componentId');
+    assert(
+      componentExists(componentId),
+      'model does not contain this component id: $componentId',
+    );
     final component = getComponent(componentId);
     for (final connection in component.connections) {
       final link = getLink(connection.connectionId);
@@ -227,13 +279,30 @@ class CanvasModel with ChangeNotifier {
         throw ArgumentError('Invalid port connection.');
       }
 
-      final Alignment firstLinkAlignment =
-          _getLinkEndpointAlignment(sourceComponent, targetComponent, link, 1);
+      final Alignment firstLinkAlignment = _getLinkEndpointAlignment(
+        sourceComponent,
+        targetComponent,
+        link,
+        1,
+      );
       final Alignment secondLinkAlignment = _getLinkEndpointAlignment(
-          targetComponent, sourceComponent, link, link.linkPoints.length - 2);
+        targetComponent,
+        sourceComponent,
+        link,
+        link.linkPoints.length - 2,
+      );
 
-      _setLinkEndpoints(link, sourceComponent, targetComponent,
-          firstLinkAlignment, secondLinkAlignment);
+      final sourceWorld = getComponentWorldPosition(sourceComponent.id);
+      final targetWorld = getComponentWorldPosition(targetComponent.id);
+      final sourceForSet = sourceComponent.copyWith(position: sourceWorld);
+      final targetForSet = targetComponent.copyWith(position: targetWorld);
+      _setLinkEndpoints(
+        link,
+        sourceForSet,
+        targetForSet,
+        firstLinkAlignment,
+        secondLinkAlignment,
+      );
     }
   }
 
@@ -243,14 +312,18 @@ class CanvasModel with ChangeNotifier {
     LinkData link,
     int linkPointIndex,
   ) {
+    final component1World = getComponentWorldPosition(component1.id);
+    final component2World = getComponentWorldPosition(component2.id);
+    final component1ForAlign = component1.copyWith(position: component1World);
+
     if (link.linkPoints.length <= 2) {
       return policySet.getLinkEndpointAlignment(
-        component1,
-        component2.position + component2.size.center(Offset.zero),
+        component1ForAlign,
+        component2World + component2.size.center(Offset.zero),
       );
     } else {
       return policySet.getLinkEndpointAlignment(
-        component1,
+        component1ForAlign,
         link.linkPoints[linkPointIndex],
       );
     }

@@ -47,6 +47,9 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
 
   static const Duration _animationDuration = Duration(milliseconds: 300);
 
+  List<Component> _cachedSortedRootComponents = const [];
+  int _cachedSortedRootComponentsSignature = 0;
+
   @override
   void initState() {
     super.initState();
@@ -67,38 +70,60 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
     super.dispose();
   }
 
-  List<Widget> showComponents(CanvasModel canvasModel) {
-    final currentComponents = canvasModel.components.values.toList();
-    currentComponents.sort((a, b) => a.zOrder.compareTo(b.zOrder));
+  List<Component> _sortedRootComponents(CanvasModel canvasModel) {
+    final rootComponents =
+        canvasModel.components.values.where((c) => c.parentId == null && c.visible);
 
-    return currentComponents
-        .map(
-          (e) => ChangeNotifierProvider<Component>.value(
-            value: e,
-            key: ValueKey(e.id),
-            child: ComponentWidget(
-              policy: widget.policy,
-            ),
-          ),
-        )
-        .toList();
+    var count = 0;
+    var signature = 0;
+    for (final component in rootComponents) {
+      count++;
+      signature = Object.hash(
+        signature,
+        component.id,
+        component.zOrder,
+        component.visible,
+      );
+    }
+    signature = Object.hash(count, signature);
+
+    if (signature == _cachedSortedRootComponentsSignature) {
+      return _cachedSortedRootComponents;
+    }
+
+    final sorted =
+        rootComponents.toList(growable: false)
+          ..sort((a, b) => a.zOrder.compareTo(b.zOrder));
+    _cachedSortedRootComponents = sorted;
+    _cachedSortedRootComponentsSignature = signature;
+    return sorted;
   }
 
-  List<Widget> showLinks(CanvasModel canvasModel) {
-    final currentLinks = canvasModel.links.values.toList();
+  Iterable<Widget> _buildRootComponentWidgets(List<Component> components) sync* {
+    for (final component in components) {
+      yield ChangeNotifierProvider<Component>.value(
+        value: component,
+        key: ValueKey(component.id),
+        child: ComponentWidget(policy: widget.policy),
+      );
+    }
+  }
 
-    return currentLinks.map((LinkData linkData) {
-      return ChangeNotifierProvider.value(
+  Iterable<Widget> _buildLinkWidgets(Iterable<LinkData> links) sync* {
+    for (final linkData in links) {
+      yield ChangeNotifierProvider.value(
         value: linkData,
         key: ValueKey(linkData.id),
         child: Link(policy: widget.policy),
       );
-    }).toList();
+    }
   }
 
-  List<Widget> showOtherWithComponentDataUnder(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((Component componentData) {
-      return ChangeNotifierProvider.value(
+  Iterable<Widget> showOtherWithComponentDataUnder(
+    Iterable<Component> components,
+  ) sync* {
+    for (final componentData in components) {
+      yield ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
@@ -110,12 +135,14 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           );
         },
       );
-    }).toList();
+    }
   }
 
-  List<Widget> buildComponentOverWidget(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((Component componentData) {
-      return ChangeNotifierProvider.value(
+  Iterable<Widget> _buildComponentOverWidgets(
+    Iterable<Component> components,
+  ) sync* {
+    for (final componentData in components) {
+      yield ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
@@ -126,12 +153,12 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           );
         },
       );
-    }).toList();
+    }
   }
 
-  List<Widget> buildLinkOverWidget(CanvasModel canvasModel) {
-    return canvasModel.components.values.map((Component componentData) {
-      return ChangeNotifierProvider.value(
+  Iterable<Widget> _buildLinkOverWidgets(Iterable<Component> components) sync* {
+    for (final componentData in components) {
+      yield ChangeNotifierProvider.value(
         value: componentData,
         builder: (context, child) {
           return Consumer<Component>(
@@ -142,7 +169,7 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
           );
         },
       );
-    }).toList();
+    }
   }
 
   /// 캔버스
@@ -220,6 +247,16 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
   Widget canvasStack() {
     return Consumer3<CanvasState, CanvasEvent, CanvasModel>(
       builder: (context, state, event, model, child) {
+        final visibleComponents =
+            model.components.values.where((c) => c.visible).toList(growable: false);
+        final visibleLinks = model.links.values.where((link) {
+          final source = model.components[link.sourceComponentId];
+          if (source == null || !source.visible) return false;
+          final target = model.components[link.targetComponentId];
+          if (target == null || !target.visible) return false;
+          return true;
+        });
+
         return DeferredPointerHandler(
           child: Stack(
             clipBehavior: Clip.none,
@@ -238,12 +275,12 @@ class FlexiEditorCanvasState extends State<FlexiEditorCanvas>
                     ),
                   ),
                 ),
-              ...showComponents(model),
-              ...buildComponentOverWidget(model),
+              ..._buildRootComponentWidgets(_sortedRootComponents(model)),
+              ..._buildComponentOverWidgets(visibleComponents),
               ...widget.policy.showCustomWidgetsOnCanvasBackground(context),
-              ...showLinks(model),
+              ..._buildLinkWidgets(visibleLinks),
               ...widget.policy.showCustomWidgetsOnCanvasForeground(context),
-              ...buildLinkOverWidget(model),
+              ..._buildLinkOverWidgets(visibleComponents),
             ],
           ),
         );

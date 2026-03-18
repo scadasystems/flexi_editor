@@ -1,3 +1,0 @@
-- [x] 회전 상태(30/45/90도 등)에서도 리사이즈 감도가 일관적이다
-- [x] 최소 크기 클램프가 유지된다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

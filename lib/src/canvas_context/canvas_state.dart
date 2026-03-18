@@ -2,17 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flexi_editor/src/canvas_context/model/component.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_dotted_background_config.dart';
 
+/// 캔버스의 “뷰 상태”를 보관합니다.
+///
+/// - [position], [scale]은 화면에서 캔버스를 이동/확대·축소하는 변환에 사용됩니다.
+/// - 이 클래스는 [ChangeNotifier]이며, [updateCanvas] 또는 일부 메서드에서 리스너가 갱신됩니다.
 class CanvasState with ChangeNotifier {
   Offset _position = const Offset(0, 0);
   double _scale = 1.0;
 
+  /// 마우스 휠 줌의 민감도입니다.
   double mouseScaleSpeed = 0.8;
 
+  /// 캔버스가 가질 수 있는 최대 스케일입니다.
   double maxScale = 8.0;
+  /// 캔버스가 가질 수 있는 최소 스케일입니다.
   double minScale = 0.1;
 
+  /// 캔버스 배경색입니다.
   Color color = Colors.white;
 
+  /// 도트 배경 설정입니다.
   CanvasDottedBackgroundConfig dottedBackground =
       const CanvasDottedBackgroundConfig();
 
@@ -26,22 +35,27 @@ class CanvasState with ChangeNotifier {
 
   double get scale => _scale;
 
+  /// 캔버스를 다시 그리도록 알립니다.
   void updateCanvas() {
     notifyListeners();
   }
 
+  /// 캔버스 위치를 [position]으로 설정합니다.
   void setPosition(Offset position) {
     _position = position;
   }
 
+  /// 캔버스 스케일을 [scale]로 설정합니다.
   void setScale(double scale) {
     _scale = scale;
   }
 
+  /// 캔버스 위치에 [offset]을 더합니다.
   void updatePosition(Offset offset) {
     _position += offset;
   }
 
+  /// 캔버스 스케일에 [scale]을 곱합니다.
   void updateScale(double scale) {
     _scale *= scale;
   }

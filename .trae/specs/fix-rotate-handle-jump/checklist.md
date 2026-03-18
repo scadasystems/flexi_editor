@@ -1,3 +1,0 @@
-- [x] 회전 핸들에서 작은 드래그로도 각도가 튀지 않는다
-- [x] Shift 스냅(45도 단위)이 점프 없이 동작한다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

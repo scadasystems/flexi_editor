@@ -1,6 +1,10 @@
 import 'package:flexi_editor/src/canvas_context/canvas_dotted_background_config.dart';
 import 'package:flutter/material.dart';
 
+/// 캔버스 배경에 도트(점) 그리드를 그리는 페인터입니다.
+///
+/// - [canvasPosition], [canvasScale]은 캔버스의 현재 변환 값입니다.
+/// - [config]의 `*Canvas` 값들은 캔버스 좌표계 기준이며, 실제 렌더링 시 스케일이 반영됩니다.
 class DottedGridPainter extends CustomPainter {
   final Offset canvasPosition;
   final double canvasScale;
@@ -20,6 +24,8 @@ class DottedGridPainter extends CustomPainter {
 
     final scale = canvasScale;
     if (scale <= 0) return;
+    // scale이 너무 작을 때는 도트를 렌더링하지 않아 비용을 줄입니다.
+    if (config.minVisibleScale > 0 && scale < config.minVisibleScale) return;
 
     final spacing = config.gridSpacingCanvas;
     final topLeftCanvas = Offset(

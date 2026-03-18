@@ -1,10 +1,11 @@
 import 'package:flexi_editor/flexi_editor.dart';
+import 'package:flexi_editor/src/canvas_context/canvas_model.dart';
 import 'package:flexi_editor/src/canvas_context/canvas_event.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ComponentWidget extends StatefulWidget {
+class ComponentWidget extends StatelessWidget {
   final PolicySet policy;
 
   const ComponentWidget({
@@ -12,170 +13,268 @@ class ComponentWidget extends StatefulWidget {
     required this.policy,
   });
 
-  @override
-  State<ComponentWidget> createState() => _ComponentWidgetState();
-}
+  static Offset _parentScrollOffset(CanvasModel canvasModel, String? parentId) {
+    if (parentId == null) return Offset.zero;
+    if (!canvasModel.componentExists(parentId)) return Offset.zero;
+    return canvasModel.getComponent(parentId).scrollOffset;
+  }
 
-class _ComponentWidgetState extends State<ComponentWidget> {
-  late Widget? _componentBody;
-  late Map<String, dynamic> _lastDynamicData;
-  late Offset _lastPosition;
-  late Size _lastSize;
-  late double _lastScale;
-  late List<String> _lastChildrenIds;
-  dynamic _lastData;
+  static int _childrenSignature(CanvasModel canvasModel, List<String> childrenIds) {
+    var hash = 0;
+    for (final id in childrenIds) {
+      if (!canvasModel.componentExists(id)) {
+        hash = Object.hash(hash, id, false);
+        continue;
+      }
 
-  @override
-  void initState() {
-    super.initState();
-    final componentData = Provider.of<Component>(context, listen: false);
-    _componentBody = widget.policy.showComponentBody(componentData);
-    _lastDynamicData = Map.from(componentData.toJson()['dynamic_data'] ?? {});
-    _lastPosition = componentData.position;
-    _lastSize = componentData.size;
-    _lastChildrenIds = List.from(componentData.childrenIds);
-    _lastData = componentData.data;
+      final child = canvasModel.getComponent(id);
+      hash = Object.hash(hash, id, true, child.zOrder, child.visible);
+    }
+    return hash;
+  }
 
-    final canvasState = Provider.of<CanvasState>(context, listen: false);
-    _lastScale = canvasState.scale;
+  static ({
+    double width,
+    double height,
+    double left,
+    double top,
+  }) _layout({
+    required Component component,
+    required double scale,
+    required Offset canvasPosition,
+    required Offset parentScrollOffset,
+  }) {
+    final localPosition = component.position - parentScrollOffset;
+
+    final width = scale * component.size.width;
+    final height = scale * component.size.height;
+
+    final left = component.parentId == null
+        ? scale * localPosition.dx + canvasPosition.dx
+        : scale * localPosition.dx;
+    final top = component.parentId == null
+        ? scale * localPosition.dy + canvasPosition.dy
+        : scale * localPosition.dy;
+
+    return (
+      width: width,
+      height: height,
+      left: left,
+      top: top,
+    );
+  }
+
+  Widget _buildSurface({
+    required BuildContext context,
+    required Component component,
+    required CanvasEvent canvasEvent,
+    required bool isStartDragSelection,
+    required double canvasScale,
+  }) {
+    final under = policy.showCustomWidgetWithComponentDataUnder(
+      context,
+      component,
+    );
+    final body = policy.showComponentBody(component) ?? const SizedBox.shrink();
+    final over = policy.showCustomWidgetWithComponentData(context, component);
+
+    final surface = Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(child: under),
+        Positioned.fill(child: body),
+        Positioned.fill(child: over),
+      ],
+    );
+
+    if (component.locked) {
+      return IgnorePointer(child: surface);
+    }
+
+    return MouseRegion(
+      onEnter: (_) => policy.onComponentEnter(component.id),
+      onExit: (_) => policy.onComponentExit(component.id),
+      child: Listener(
+        onPointerSignal: (event) {
+          if (!component.hasChildren) return;
+          if (event is! PointerScrollEvent) return;
+          if (event.kind == PointerDeviceKind.trackpad) return;
+
+          final deltaCanvas = Offset(
+            event.scrollDelta.dx / canvasScale,
+            event.scrollDelta.dy / canvasScale,
+          );
+          component.updateScrollOffset(deltaCanvas);
+          policy.canvasWriter.model.updateComponentLinks(component.id);
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: isStartDragSelection
+              ? () => policy.onComponentTap(component.id)
+              : null,
+          onTapDown: isStartDragSelection
+              ? (details) {
+                  canvasEvent.startTapComponent();
+                  policy.onComponentTapDown(component.id, details);
+                }
+              : null,
+          onTapUp: isStartDragSelection
+              ? (details) {
+                  policy.onComponentTapUp(component.id, details);
+                  canvasEvent.stopTapComponent();
+                }
+              : null,
+          onTapCancel: isStartDragSelection
+              ? () {
+                  policy.onComponentTapCancel(component.id);
+                  canvasEvent.stopTapComponent();
+                }
+              : null,
+          onDoubleTapDown: isStartDragSelection
+              ? (details) =>
+                  policy.onComponentDoubleTapDown(component.id, details)
+              : null,
+          onDoubleTap: () => policy.onComponentDoubleTap(component.id),
+          onScaleStart: isStartDragSelection
+              ? (details) {
+                  canvasEvent.startTapComponent();
+                  policy.onComponentScaleStart(component.id, details);
+                }
+              : null,
+          onScaleUpdate: isStartDragSelection
+              ? (details) => policy.onComponentScaleUpdate(component.id, details)
+              : null,
+          onScaleEnd: isStartDragSelection
+              ? (details) {
+                  canvasEvent.stopTapComponent();
+                  policy.onComponentScaleEnd(component.id, details);
+                }
+              : null,
+          child: surface,
+        ),
+      ),
+    );
+  }
+
+  List<Component> _sortedChildren({
+    required Component component,
+    required CanvasModel canvasModel,
+  }) {
+    final childOrderIndex = <String, int>{
+      for (var i = 0; i < component.childrenIds.length; i++)
+        component.childrenIds[i]: i,
+    };
+
+    final children =
+        component.childrenIds
+            .where(canvasModel.componentExists)
+            .map(canvasModel.getComponent)
+            .where((c) => c.visible)
+            .toList()
+          ..sort((a, b) {
+            final zCompare = a.zOrder.compareTo(b.zOrder);
+            if (zCompare != 0) return zCompare;
+            return (childOrderIndex[a.id] ?? 0).compareTo(
+              childOrderIndex[b.id] ?? 0,
+            );
+          });
+
+    return children;
+  }
+
+  List<Widget> _childWidgets({
+    required List<Component> children,
+  }) {
+    return children
+        .map(
+          (childComponent) => ChangeNotifierProvider<Component>.value(
+            value: childComponent,
+            key: ValueKey(childComponent.id),
+            child: ComponentWidget(policy: policy),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Widget _buildContent({
+    required Component component,
+    required Widget surface,
+    required List<Widget> childWidgets,
+  }) {
+    Widget content = Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        surface,
+        ...childWidgets,
+      ],
+    );
+
+    if (component.isScreen) {
+      content = ClipRect(child: content);
+    }
+
+    return content;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<Component>(
-      builder: (context, component, _) {
-        final currentDynamicData = component.toJson()['dynamic_data'] ?? {};
-        final currentData = component.data;
+    final component = context.watch<Component>();
+    final canvasEvent = context.read<CanvasEvent>();
+    final isStartDragSelection =
+        context.select<CanvasEvent, bool>((event) => event.isStartDragSelection);
 
-        // data나 dynamic_data 중 하나라도 변경되면 재생성
-        final dataChanged = _lastData != currentData;
-        final dynamicDataChanged =
-            !mapEquals(_lastDynamicData, currentDynamicData);
+    final canvasTransform = context.select<CanvasState, ({double scale, Offset position})>(
+      (state) => (scale: state.scale, position: state.position),
+    );
 
-        if (dataChanged || dynamicDataChanged) {
-          _componentBody = widget.policy.showComponentBody(component);
-          _lastDynamicData = Map.from(currentDynamicData);
-          _lastData = currentData;
-        }
+    final canvasModel = context.read<CanvasModel>();
 
-        final hasChildren = component.isScreen && component.hasChildren;
+    final modelDependencies = context.select<
+        CanvasModel,
+        ({
+          Offset parentScrollOffset,
+          int childrenSignature,
+        })>(
+      (model) => (
+        parentScrollOffset: _parentScrollOffset(model, component.parentId),
+        childrenSignature: _childrenSignature(model, component.childrenIds),
+      ),
+    );
 
-        return Consumer2<CanvasState, CanvasEvent>(
-          builder: (context, canvasState, canvasEvent, _) {
-            // Only calculate positions if necessary values changed
-            final needsPositionUpdate = component.position != _lastPosition ||
-                component.size != _lastSize ||
-                canvasState.scale != _lastScale;
+    final layout = _layout(
+      component: component,
+      scale: canvasTransform.scale,
+      canvasPosition: canvasTransform.position,
+      parentScrollOffset: modelDependencies.parentScrollOffset,
+    );
 
-            double left, top, width, height;
+    final surface = _buildSurface(
+      context: context,
+      component: component,
+      canvasEvent: canvasEvent,
+      isStartDragSelection: isStartDragSelection,
+      canvasScale: canvasTransform.scale,
+    );
 
-            if (needsPositionUpdate) {
-              left = canvasState.scale * component.position.dx +
-                  canvasState.position.dx;
-              top = canvasState.scale * component.position.dy +
-                  canvasState.position.dy;
-              width = canvasState.scale * component.size.width;
-              height = canvasState.scale * component.size.height;
+    final children = _sortedChildren(
+      component: component,
+      canvasModel: canvasModel,
+    );
+    final childWidgets = _childWidgets(children: children);
+    final content = _buildContent(
+      component: component,
+      surface: surface,
+      childWidgets: childWidgets,
+    );
 
-              _lastPosition = component.position;
-              _lastSize = component.size;
-              _lastScale = canvasState.scale;
-            } else {
-              // Use cached calculations
-              left = _lastScale * _lastPosition.dx + canvasState.position.dx;
-              top = _lastScale * _lastPosition.dy + canvasState.position.dy;
-              width = _lastScale * _lastSize.width;
-              height = _lastScale * _lastSize.height;
-            }
-
-            if (!listEquals(component.childrenIds, _lastChildrenIds)) {
-              _lastChildrenIds = List.from(component.childrenIds);
-            }
-
-            return Positioned(
-              left: left,
-              top: top,
-              width: width,
-              height: height,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: canvasEvent.isStartDragSelection
-                    ? () => widget.policy.onComponentTap(component.id)
-                    : null,
-                onTapDown: canvasEvent.isStartDragSelection
-                    ? (details) {
-                        widget.policy.onComponentTapDown(component.id, details);
-                        canvasEvent.startTapComponent();
-                      }
-                    : null,
-                onTapUp: canvasEvent.isStartDragSelection
-                    ? (details) {
-                        widget.policy.onComponentTapUp(component.id, details);
-                        canvasEvent.stopTapComponent();
-                      }
-                    : null,
-                onTapCancel: canvasEvent.isStartDragSelection
-                    ? () => widget.policy.onComponentTapCancel(component.id)
-                    : null,
-                onDoubleTapDown: canvasEvent.isStartDragSelection
-                    ? (details) => widget.policy
-                        .onComponentDoubleTapDown(component.id, details)
-                    : null,
-                onDoubleTap: !hasChildren
-                    ? () => widget.policy.onComponentDoubleTap(component.id)
-                    : null,
-                onScaleStart: !hasChildren
-                    ? canvasEvent.isStartDragSelection && !component.locked
-                        ? (details) => widget.policy
-                            .onComponentScaleStart(component.id, details)
-                        : null
-                    : null,
-                onScaleUpdate: !hasChildren
-                    ? canvasEvent.isStartDragSelection && !component.locked
-                        ? (details) => widget.policy
-                            .onComponentScaleUpdate(component.id, details)
-                        : null
-                    : null,
-                onScaleEnd: !hasChildren
-                    ? canvasEvent.isStartDragSelection && !component.locked
-                        ? (details) {
-                            canvasEvent.stopTapComponent();
-                            widget.policy
-                                .onComponentScaleEnd(component.id, details);
-                          }
-                        : null
-                    : null,
-                child: MouseRegion(
-                  onEnter: !hasChildren
-                      ? (_) => widget.policy.onComponentEnter(component.id)
-                      : null,
-                  onExit: !hasChildren
-                      ? (_) => widget.policy.onComponentExit(component.id)
-                      : null,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        width: component.size.width,
-                        height: component.size.height,
-                        child: Container(
-                          transform: Matrix4.diagonal3Values(
-                              canvasState.scale, canvasState.scale, 1.0),
-                          child: _componentBody,
-                        ),
-                      ),
-                      widget.policy.showCustomWidgetWithComponentData(
-                          context, component),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+    return Positioned(
+      left: layout.left,
+      top: layout.top,
+      width: layout.width,
+      height: layout.height,
+      child: content,
     );
   }
 }

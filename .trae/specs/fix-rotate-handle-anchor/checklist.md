@@ -1,4 +1,0 @@
-- [x] 회전 핸들이 화면 기준 최상단 바깥에 고정되어 표시된다
-- [x] 정사각형 0도/90도에서 회전 핸들 위치가 동일하다
-- [x] Shift 스냅 및 회전 점프 방지가 유지된다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

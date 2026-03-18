@@ -1,5 +1,0 @@
-- [x] Shift 리사이즈 시 도형 비율이 유지된다
-- [x] 회전 상태에서도 Shift 비율 고정이 동일하게 동작한다
-- [x] 드래그 중 Shift 토글 시 점프 없이 연속 동작한다
-- [x] 최소 크기 클램프 및 반대 코너 고정 기준이 유지된다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

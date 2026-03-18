@@ -1,2 +1,0 @@
-- [x] `example_policy_set.dart`가 역할별 파일로 분리되어 가독성이 개선된다
-- [x] 동작 변경 없이 `flutter analyze`, `flutter build web`가 통과한다

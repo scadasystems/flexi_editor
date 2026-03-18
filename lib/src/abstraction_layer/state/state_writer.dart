@@ -50,11 +50,13 @@ class CanvasStateWriter {
     _canvasState.color = color;
   }
 
+  /// 도트 배경 설정을 통째로 [config]로 교체합니다.
   void setDottedBackground(CanvasDottedBackgroundConfig config) {
     _canvasState.dottedBackground = config;
     _canvasState.updateCanvas();
   }
 
+  /// 도트 배경 활성화 여부를 [enabled]로 설정합니다.
   void setDottedBackgroundEnabled(bool enabled) {
     _canvasState.dottedBackground =
         _canvasState.dottedBackground.copyWith(enabled: enabled);

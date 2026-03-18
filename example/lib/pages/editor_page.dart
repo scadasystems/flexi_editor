@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flexi_editor/flexi_editor.dart';
@@ -7,7 +8,17 @@ import 'package:provider/provider.dart';
 
 import '../editor/editor_controller.dart';
 import '../editor/editor_models.dart';
-import '../editor/example_policy_set.dart';
+import '../editor/example_editor_store.dart';
+import '../theme/theme_mode_controller.dart';
+import '../widgets/editor_debug_json_viewer_sheet.dart';
+import 'layer_panel/layer_panel.dart';
+
+part 'editor_page/editor_page_drag_helpers.dart';
+part 'editor_page/editor_page_inspector.dart';
+part 'editor_page/editor_page_top_bar.dart';
+
+const double _layerPanelWidth = 220;
+const double _shapePanelGap = 5;
 
 class EditorPage extends StatefulWidget {
   const EditorPage({super.key});
@@ -16,25 +27,15 @@ class EditorPage extends StatefulWidget {
   State<EditorPage> createState() => _EditorPageState();
 }
 
-class _EditorPageState extends State<EditorPage> {
-  late final EditorController _controller;
-  late final ExamplePolicySet _policySet;
-  late final FlexiEditorContext _editorContext;
-  late final CanvasUndoRedoController _undoRedoController;
-
-  String? _draftComponentId;
-  Rect? _lastDragRect;
+class _EditorPageState extends State<EditorPage> with _EditorPageDragHelpers {
+  late final ExampleEditorStore _editor;
+  Brightness? _lastBrightness;
 
   @override
   void initState() {
     super.initState();
-    _controller = EditorController();
-    _undoRedoController = CanvasUndoRedoController();
-    _policySet = ExamplePolicySet(
-      controller: _controller,
-      undoRedoController: _undoRedoController,
-    );
-    _editorContext = FlexiEditorContext(_policySet);
+    _editor = ExampleEditorStore();
+    _controller.addListener(_onControllerChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
@@ -43,114 +44,46 @@ class _EditorPageState extends State<EditorPage> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.removeListener(_onControllerChanged);
+    _editor.dispose();
     super.dispose();
   }
 
-  void _onSelectionRectStart() {
-    _lastDragRect = null;
-    if (_controller.tool == EditorTool.select) {
-      _controller.clearSelection();
-    }
+  @override
+  /// 편집기 입력/선택 상태를 제공하는 컨트롤러입니다.
+  EditorController get _controller => _editor.controller;
+
+  @override
+  /// FlexiEditor 동작에 필요한 컨텍스트입니다.
+  FlexiEditorContext get _editorContext => _editor.editorContext;
+
+  @override
+  /// undo/redo를 관리하는 컨트롤러입니다.
+  CanvasUndoRedoController get _undoRedoController =>
+      _editor.undoRedoController;
+
+  /// 새 Screen 컴포넌트를 추가하고 선택 상태 및 zOrder를 정리한 뒤 커밋합니다.
+  void _addScreen() {
+    final component = Component<EditorShapeData>(
+      type: 'screen',
+      position: const Offset(80, 80),
+      size: const Size(640, 420),
+      data: const EditorShapeData(
+        fillColorValue: 0xFFF8FAFC,
+        strokeColorValue: 0xFFCBD5E1,
+        strokeWidth: 1,
+        cornerRadius: 16,
+        rotationRadians: 0,
+      ),
+    );
+    final id = _editorContext.canvasModel.addComponent(component);
+    _applyTopmostZOrderToNewComponent(componentId: id, parentId: null);
+    _controller.selectSingleComponent(id);
+    _applyComponentGesturePolicy();
+    _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
   }
 
-  void _onSelectionRectUpdate(Rect selectionRect) {
-    _lastDragRect = selectionRect;
-
-    final tool = _controller.tool;
-    if (tool == EditorTool.rectangle || tool == EditorTool.oval) {
-      _upsertDraftShape(selectionRect, tool);
-      return;
-    }
-
-    if (tool == EditorTool.select) {
-      final ids = _hitTestComponentsInRect(selectionRect);
-      _controller.setSelectedComponents(ids);
-    }
-  }
-
-  void _onSelectionRectEnd() {
-    final tool = _controller.tool;
-    final rect = _lastDragRect;
-
-    if ((tool == EditorTool.rectangle || tool == EditorTool.oval) &&
-        _draftComponentId != null) {
-      final id = _draftComponentId!;
-      _draftComponentId = null;
-
-      final finalized = rect != null &&
-          rect.size.width >= 8 &&
-          rect.size.height >= 8;
-
-      if (!finalized) {
-        if (_editorContext.canvasModel.componentExists(id)) {
-          _editorContext.canvasModel.removeComponent(id);
-          _undoRedoController.commit(
-            reader: _editorContext.policySet.canvasReader,
-          );
-        }
-        return;
-      }
-
-      _controller
-        ..selectSingleComponent(id)
-        ..setTool(EditorTool.select);
-      _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
-
-      return;
-    }
-
-    _draftComponentId = null;
-    _lastDragRect = null;
-  }
-
-  Iterable<String> _hitTestComponentsInRect(Rect selectionRect) sync* {
-    for (final component in _editorContext.canvasModel.components.values) {
-      final componentRect = Rect.fromLTWH(
-        component.position.dx,
-        component.position.dy,
-        component.size.width,
-        component.size.height,
-      );
-      if (selectionRect.overlaps(componentRect)) {
-        yield component.id;
-      }
-    }
-  }
-
-  void _upsertDraftShape(Rect rect, EditorTool tool) {
-    final subtype = tool == EditorTool.oval ? 'oval' : 'rect';
-
-    final id = _draftComponentId;
-    if (id == null) {
-      final component = Component<EditorShapeData>(
-        type: 'shape',
-        subtype: subtype,
-        position: rect.topLeft,
-        size: rect.size,
-        data: const EditorShapeData(
-          fillColorValue: 0xFFFFFFFF,
-          strokeColorValue: 0xFF111827,
-          strokeWidth: 1,
-          cornerRadius: 12,
-          rotationRadians: 0,
-        ),
-      );
-      _draftComponentId = _editorContext.canvasModel.addComponent(component);
-      return;
-    }
-
-    if (!_editorContext.canvasModel.componentExists(id)) {
-      _draftComponentId = null;
-      return;
-    }
-
-    final component = _editorContext.canvasModel.getComponent(id);
-    component
-      ..setPosition(rect.topLeft)
-      ..setSize(rect.size);
-  }
-
+  /// 키보드 입력(undo/redo/escape/reset/delete)을 처리합니다.
   void _onKeyboardEvent(FocusNode node, KeyEvent keyEvent) {
     if (keyEvent is! KeyDownEvent) return;
 
@@ -191,7 +124,8 @@ class _EditorPageState extends State<EditorPage> {
       return;
     }
 
-    if (key == LogicalKeyboardKey.delete || key == LogicalKeyboardKey.backspace) {
+    if (key == LogicalKeyboardKey.delete ||
+        key == LogicalKeyboardKey.backspace) {
       var changed = false;
       final selectedLinkId = _controller.selectedLinkId;
       if (selectedLinkId != null &&
@@ -200,24 +134,27 @@ class _EditorPageState extends State<EditorPage> {
         changed = true;
       }
 
-      final selectedComponentIds =
-          _controller.selectedComponentIds.toList(growable: false);
+      final selectedComponentIds = _controller.selectedComponentIds.toList(
+        growable: false,
+      );
       for (final id in selectedComponentIds) {
         if (_editorContext.canvasModel.componentExists(id)) {
-          _editorContext.policySet.canvasWriter.model.removeComponentWithChildren(
-            id,
-          );
+          _editorContext.policySet.canvasWriter.model
+              .removeComponentWithChildren(id);
           changed = true;
         }
       }
 
       _controller.clearSelection();
       if (changed) {
-        _undoRedoController.commit(reader: _editorContext.policySet.canvasReader);
+        _undoRedoController.commit(
+          reader: _editorContext.policySet.canvasReader,
+        );
       }
     }
   }
 
+  /// 커스텀 컴포넌트 데이터(EditorShapeData)를 JSON에서 복원합니다.
   dynamic _decodeEditorShapeData(Map<String, dynamic> json) {
     return EditorShapeData(
       fillColorValue: json['fill'] as int? ?? 0xFFFFFFFF,
@@ -229,21 +166,34 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   @override
+  /// 에디터 화면을 구성하고, 테마 변경에 따라 캔버스 스타일을 갱신합니다.
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    if (_lastBrightness != brightness) {
+      _lastBrightness = brightness;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _editor.applyTheme(brightness: brightness, scheme: scheme);
+      });
+    }
+
     return ChangeNotifierProvider.value(
-      value: _controller,
+      value: _editor,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF3F4F6),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Row(
             children: [
-              const _ToolRail(),
+              const SizedBox(
+                width: _layerPanelWidth,
+                child: LayerPanel(),
+              ),
               Expanded(
                 child: Column(
                   children: [
                     _TopBar(
-                      editorContext: _editorContext,
-                      undoRedoController: _undoRedoController,
+                      onAddScreen: _addScreen,
                       onUndo: () {
                         final didUndo = _undoRedoController.undo(
                           reader: _editorContext.policySet.canvasReader,
@@ -267,15 +217,22 @@ class _EditorPageState extends State<EditorPage> {
                         child: ClipRRect(
                           borderRadius: .circular(12),
                           child: DecoratedBox(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFFFFFF),
-                            ),
-                            child: FlexiEditor(
-                              flexiEditorContext: _editorContext,
-                              onSelectionRectStart: _onSelectionRectStart,
-                              onSelectionRectUpdate: _onSelectionRectUpdate,
-                              onSelectionRectEnd: _onSelectionRectEnd,
-                              onKeyboardEvent: _onKeyboardEvent,
+                            decoration: BoxDecoration(color: scheme.surface),
+                            child: Stack(
+                              children: [
+                                FlexiEditor(
+                                  flexiEditorContext: _editorContext,
+                                  onSelectionRectStart: _onSelectionRectStart,
+                                  onSelectionRectUpdate: _onSelectionRectUpdate,
+                                  onSelectionRectEnd: _onSelectionRectEnd,
+                                  onKeyboardEvent: _onKeyboardEvent,
+                                ),
+                                const Positioned(
+                                  left: _shapePanelGap,
+                                  top: 12,
+                                  child: _FloatingShapePanel(),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -284,372 +241,10 @@ class _EditorPageState extends State<EditorPage> {
                   ],
                 ),
               ),
-              _Inspector(editorContext: _editorContext),
+              const _Inspector(),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  final FlexiEditorContext editorContext;
-  final CanvasUndoRedoController undoRedoController;
-  final VoidCallback onUndo;
-  final VoidCallback onRedo;
-
-  const _TopBar({
-    required this.editorContext,
-    required this.undoRedoController,
-    required this.onUndo,
-    required this.onRedo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: Material(
-        color: const Color(0xFFFFFFFF),
-        child: Padding(
-          padding: const .symmetric(horizontal: 12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 520;
-
-              return Row(
-                children: [
-                  Text(
-                    isCompact ? 'Flexi' : 'Flexi Editor',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Consumer<EditorController>(
-                      builder: (context, controller, child) {
-                        return Text(
-                          switch (controller.tool) {
-                            EditorTool.select => 'Select',
-                            EditorTool.rectangle => 'Rectangle',
-                            EditorTool.oval => 'Oval',
-                            EditorTool.connector => 'Connector',
-                          },
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        );
-                      },
-                    ),
-                  ),
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: undoRedoController,
-                    builder: (context, child) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: undoRedoController.canUndo ? onUndo : null,
-                            icon: const Icon(Icons.undo),
-                            tooltip: 'Undo',
-                          ),
-                          IconButton(
-                            onPressed: undoRedoController.canRedo ? onRedo : null,
-                            icon: const Icon(Icons.redo),
-                            tooltip: 'Redo',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  if (!isCompact)
-                    AnimatedBuilder(
-                      animation: editorContext.canvasState,
-                      builder: (context, child) {
-                        final zoom =
-                            (editorContext.canvasState.scale * 100).round();
-                        return Text(
-                          'Zoom $zoom%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
-                        );
-                      },
-                    ),
-                  if (!isCompact) const SizedBox(width: 12),
-                  if (isCompact)
-                    IconButton(
-                      onPressed: editorContext.canvasState.resetCanvasView,
-                      icon: const Icon(Icons.center_focus_strong_outlined),
-                      tooltip: 'Reset',
-                    )
-                  else
-                    TextButton(
-                      onPressed: editorContext.canvasState.resetCanvasView,
-                      child: const Text('Reset'),
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolRail extends StatelessWidget {
-  const _ToolRail();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 60,
-      child: Material(
-        color: const Color(0xFFFFFFFF),
-        child: Padding(
-          padding: const .symmetric(vertical: 12),
-          child: Consumer<EditorController>(
-            builder: (context, controller, child) {
-              return Column(
-                children: [
-                  _ToolButton(
-                    icon: Icons.near_me_outlined,
-                    selected: controller.tool == EditorTool.select,
-                    onPressed: () => controller.setTool(EditorTool.select),
-                  ),
-                  _ToolButton(
-                    icon: Icons.crop_square_outlined,
-                    selected: controller.tool == EditorTool.rectangle,
-                    onPressed: () => controller.setTool(EditorTool.rectangle),
-                  ),
-                  _ToolButton(
-                    icon: Icons.circle_outlined,
-                    selected: controller.tool == EditorTool.oval,
-                    onPressed: () => controller.setTool(EditorTool.oval),
-                  ),
-                  _ToolButton(
-                    icon: Icons.polyline_outlined,
-                    selected: controller.tool == EditorTool.connector,
-                    onPressed: () => controller.setTool(EditorTool.connector),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  const _ToolButton({
-    required this.icon,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const .symmetric(vertical: 6),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        style: IconButton.styleFrom(
-          backgroundColor:
-              selected ? const Color(0xFF2563EB).withValues(alpha: 0.12) : null,
-          foregroundColor: selected ? const Color(0xFF2563EB) : null,
-        ),
-      ),
-    );
-  }
-}
-
-class _Inspector extends StatelessWidget {
-  final FlexiEditorContext editorContext;
-
-  const _Inspector({required this.editorContext});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      child: Material(
-        color: const Color(0xFFFFFFFF),
-        child: Padding(
-          padding: const .all(12),
-          child: AnimatedBuilder(
-            animation: Listenable.merge([editorContext.canvasModel, context.watch<EditorController>()]),
-            builder: (context, child) {
-              final controller = context.read<EditorController>();
-              final selectedIds = controller.selectedComponentIds.toList();
-              final selectedLinkId = controller.selectedLinkId;
-
-              if (selectedLinkId != null) {
-                return _InspectorSection(
-                  title: 'Link',
-                  children: [
-                    _InspectorRow(label: 'id', value: selectedLinkId),
-                  ],
-                );
-              }
-
-              if (selectedIds.length == 1) {
-                final id = selectedIds.single;
-                final component = editorContext.canvasModel.componentExists(id)
-                    ? editorContext.canvasModel.getComponent(id)
-                    : null;
-
-                if (component == null) {
-                  return const _InspectorSection(
-                    title: 'Selection',
-                    children: [
-                      _InspectorRow(label: 'status', value: 'missing'),
-                    ],
-                  );
-                }
-
-                return AnimatedBuilder(
-                  animation: component,
-                  builder: (context, child) {
-                    final data = component.data;
-                    final rotationRadians =
-                        data is EditorShapeData ? data.rotationRadians : null;
-                    final rotationDegrees = rotationRadians == null
-                        ? null
-                        : rotationRadians * 180 / math.pi;
-
-                    return _InspectorSection(
-                      title: 'Component',
-                      children: [
-                        _InspectorRow(label: 'id', value: component.id),
-                        _InspectorRow(label: 'type', value: component.type),
-                        if (component.subtype != null)
-                          _InspectorRow(
-                            label: 'subtype',
-                            value: component.subtype!,
-                          ),
-                        _InspectorRow(
-                          label: 'x',
-                          value: component.position.dx.toStringAsFixed(0),
-                        ),
-                        _InspectorRow(
-                          label: 'y',
-                          value: component.position.dy.toStringAsFixed(0),
-                        ),
-                        _InspectorRow(
-                          label: 'w',
-                          value: component.size.width.toStringAsFixed(0),
-                        ),
-                        _InspectorRow(
-                          label: 'h',
-                          value: component.size.height.toStringAsFixed(0),
-                        ),
-                        if (rotationDegrees != null)
-                          _InspectorRow(
-                            label: 'rotate',
-                            value: '${rotationDegrees.toStringAsFixed(1)}°',
-                          ),
-                      ],
-                    );
-                  },
-                );
-              }
-
-              return _InspectorSection(
-                title: 'Selection',
-                children: [
-                  _InspectorRow(
-                    label: 'components',
-                    value: selectedIds.length.toString(),
-                  ),
-                  _InspectorRow(
-                    label: 'links',
-                    value: selectedLinkId == null ? '0' : '1',
-                  ),
-                  if (controller.pendingConnectorSourceComponentId != null)
-                    _InspectorRow(
-                      label: 'connector',
-                      value: 'source selected',
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InspectorSection extends StatelessWidget {
-  final String title;
-  final List<Widget> children;
-
-  const _InspectorSection({required this.title, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...children,
-      ],
-    );
-  }
-}
-
-class _InspectorRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InspectorRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const .only(bottom: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

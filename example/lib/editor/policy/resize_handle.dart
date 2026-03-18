@@ -2,6 +2,7 @@ part of '../example_policy_set.dart';
 
 enum _ResizeHandleType { topLeft, topRight, bottomLeft, bottomRight }
 
+/// 벡터를 원점 기준으로 [angleRadians] 만큼 회전합니다.
 Offset _rotateVector(Offset vector, double angleRadians) {
   final cosA = math.cos(angleRadians);
   final sinA = math.sin(angleRadians);
@@ -11,10 +12,12 @@ Offset _rotateVector(Offset vector, double angleRadians) {
   );
 }
 
+/// [center]를 중심으로 [point]를 [angleRadians] 만큼 회전합니다.
 Offset _rotatePointAround(Offset point, Offset center, double angleRadians) {
   return center + _rotateVector(point - center, angleRadians);
 }
 
+/// 선택 컴포넌트의 모서리 크기 조절 핸들 위젯입니다.
 class _ResizeHandle extends StatefulWidget {
   final ExamplePolicySet policy;
   final CanvasState canvasState;
@@ -36,6 +39,7 @@ class _ResizeHandle extends StatefulWidget {
   });
 
   @override
+  /// 리사이즈 핸들의 상태를 생성합니다.
   State<_ResizeHandle> createState() => _ResizeHandleState();
 }
 
@@ -47,15 +51,18 @@ class _ResizeHandleState extends State<_ResizeHandle> {
   double? _activeAspectRatio;
   bool _lastShiftPressed = false;
 
+  /// 글로벌 좌표를 캔버스 좌표(스케일/이동 반영)로 변환합니다.
   Offset? _canvasPointFromGlobal(Offset globalPoint) {
-    final box =
-        widget.canvasState.canvasGlobalKey.currentContext?.findRenderObject();
+    final box = widget.canvasState.canvasGlobalKey.currentContext
+        ?.findRenderObject();
     if (box is! RenderBox) return null;
 
     final localPoint = box.globalToLocal(globalPoint);
-    return (localPoint - widget.canvasState.position) / widget.canvasState.scale;
+    return (localPoint - widget.canvasState.position) /
+        widget.canvasState.scale;
   }
 
+  /// 절댓값 기준 최소 [minHalf]를 만족하도록 [value]를 보정합니다.
   double _clampHalf(double value, double minHalf) {
     final absValue = value.abs();
     if (absValue >= minHalf) return value;
@@ -63,6 +70,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
     return value.sign * minHalf;
   }
 
+  /// 비율을 유지하며 최소 크기 제한을 적용한 벡터를 반환합니다.
   Offset _applyAspectAndClamp({
     required Offset vUnrot,
     required double aspectRatio,
@@ -104,6 +112,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
     return Offset(signX * absX, signY * absY);
   }
 
+  /// 회전이 적용된 사각형의 드래그 코너와 고정 코너 좌표를 계산합니다.
   ({Offset dragged, Offset fixed}) _rotatedDraggedAndFixedCorners({
     required Offset position,
     required Size size,
@@ -139,25 +148,26 @@ class _ResizeHandleState extends State<_ResizeHandle> {
 
     return switch (type) {
       _ResizeHandleType.topLeft => (
-          dragged: rotatedTopLeft,
-          fixed: rotatedBottomRight,
-        ),
+        dragged: rotatedTopLeft,
+        fixed: rotatedBottomRight,
+      ),
       _ResizeHandleType.topRight => (
-          dragged: rotatedTopRight,
-          fixed: rotatedBottomLeft,
-        ),
+        dragged: rotatedTopRight,
+        fixed: rotatedBottomLeft,
+      ),
       _ResizeHandleType.bottomLeft => (
-          dragged: rotatedBottomLeft,
-          fixed: rotatedTopRight,
-        ),
+        dragged: rotatedBottomLeft,
+        fixed: rotatedTopRight,
+      ),
       _ResizeHandleType.bottomRight => (
-          dragged: rotatedBottomRight,
-          fixed: rotatedTopLeft,
-        ),
+        dragged: rotatedBottomRight,
+        fixed: rotatedTopLeft,
+      ),
     };
   }
 
   @override
+  /// 리사이즈 핸들의 위치/커서 및 드래그 제스처를 구성합니다.
   Widget build(BuildContext context) {
     final half = _ResizeHandle._handleSize / 2;
     final r = widget.highlightStrokeWidth == 0
@@ -191,14 +201,18 @@ class _ResizeHandleState extends State<_ResizeHandle> {
             behavior: HitTestBehavior.opaque,
             onPanStart: (details) {
               final data = widget.componentData.data;
-              final rotationRadians =
-                  data is EditorShapeData ? data.rotationRadians : 0.0;
-              final startPointerCanvas =
-                  _canvasPointFromGlobal(details.globalPosition);
+              final rotationRadians = data is EditorShapeData
+                  ? data.rotationRadians
+                  : 0.0;
+              final startPointerCanvas = _canvasPointFromGlobal(
+                details.globalPosition,
+              );
               if (startPointerCanvas == null) return;
 
+              final worldPosition = widget.policy.canvasReader.model
+                  .getComponentWorldPosition(widget.componentData.id);
               final corners = _rotatedDraggedAndFixedCorners(
-                position: widget.componentData.position,
+                position: worldPosition,
                 size: widget.componentData.size,
                 rotationRadians: rotationRadians,
                 type: widget.type,
@@ -211,7 +225,8 @@ class _ResizeHandleState extends State<_ResizeHandle> {
               _lastShiftPressed = HardwareKeyboard.instance.isShiftPressed;
               _activeAspectRatio = widget.componentData.size.height == 0
                   ? null
-                  : widget.componentData.size.width / widget.componentData.size.height;
+                  : widget.componentData.size.width /
+                        widget.componentData.size.height;
             },
             onPanUpdate: (details) {
               final startPointerCanvas = _startPointerCanvas;
@@ -225,8 +240,9 @@ class _ResizeHandleState extends State<_ResizeHandle> {
                 return;
               }
 
-              final currentPointerCanvas =
-                  _canvasPointFromGlobal(details.globalPosition);
+              final currentPointerCanvas = _canvasPointFromGlobal(
+                details.globalPosition,
+              );
               if (currentPointerCanvas == null) return;
 
               final shiftPressed = HardwareKeyboard.instance.isShiftPressed;
@@ -244,7 +260,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
                 _activeAspectRatio = widget.componentData.size.height == 0
                     ? null
                     : widget.componentData.size.width /
-                        widget.componentData.size.height;
+                          widget.componentData.size.height;
               }
 
               final deltaPointer = currentPointerCanvas - startPointerCanvas;
@@ -281,9 +297,19 @@ class _ResizeHandleState extends State<_ResizeHandle> {
               final width = (corner1.dx - corner2.dx).abs();
               final height = (corner1.dy - corner2.dy).abs();
 
+              final parentId = widget.componentData.parentId;
+              final position = parentId == null
+                  ? Offset(left, top)
+                  : Offset(left, top) -
+                        widget.policy.canvasReader.model
+                            .getComponentWorldPosition(parentId) +
+                        widget.policy.canvasReader.model
+                            .getComponent(parentId)
+                            .scrollOffset;
+
               widget.policy.canvasWriter.model.setComponentPosition(
                 widget.componentData.id,
-                Offset(left, top),
+                position,
               );
               widget.policy.canvasWriter.model.setComponentSize(
                 widget.componentData.id,
@@ -305,8 +331,11 @@ class _ResizeHandleState extends State<_ResizeHandle> {
             },
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFFFF),
-                border: Border.all(color: const Color(0xFF2563EB), width: 1),
+                color: widget.policy.uiHandleFillColor,
+                border: Border.all(
+                  color: widget.policy.uiAccentColor,
+                  width: 1,
+                ),
                 borderRadius: .circular(2),
               ),
             ),

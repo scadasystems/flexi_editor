@@ -1,3 +1,0 @@
-- [x] 회전 상태에서도 코너 포인트가 테두리 모서리와 정확히 일치한다
-- [x] 리사이즈/회전 동작이 기존과 동일하게 유지된다
-- [x] example 기준 `flutter analyze`, `flutter build web`가 통과한다

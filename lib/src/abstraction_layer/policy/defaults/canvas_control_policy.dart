@@ -3,6 +3,9 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// 캔버스의 이동/줌(스케일) 동작을 기본 구현으로 제공하는 정책입니다.
+///
+/// 제스처 이벤트의 `details`는 Flutter가 제공하는 값이며, 좌표는 위젯 로컬 좌표(화면) 기준입니다.
 mixin CanvasControlPolicy on BasePolicySet {
   AnimationController? _animationController;
   double _baseScale = 1.0;
@@ -27,6 +30,9 @@ mixin CanvasControlPolicy on BasePolicySet {
     _animationController?.dispose();
   }
 
+  /// 캔버스 스케일 제스처가 시작될 때 호출됩니다.
+  ///
+  /// - [details]: 포커스/포인터 카운트 등 제스처 정보
   void onCanvasScaleStart(ScaleStartDetails details) {
     _baseScale = canvasReader.state.scale;
     _basePosition = canvasReader.state.position;
@@ -34,6 +40,9 @@ mixin CanvasControlPolicy on BasePolicySet {
     _lastFocalPoint = details.focalPoint;
   }
 
+  /// 캔버스 스케일 제스처가 갱신될 때 호출됩니다.
+  ///
+  /// - [details]: 스케일/이동 델타 등 제스처 정보
   void onCanvasScaleUpdate(ScaleUpdateDetails details) {
     if (!canUpdateCanvasModel) return;
 
@@ -59,6 +68,7 @@ mixin CanvasControlPolicy on BasePolicySet {
     }
   }
 
+  /// 캔버스 스케일 제스처가 끝날 때 호출됩니다.
   void onCanvasScaleEnd(ScaleEndDetails details) {
     if (canUpdateCanvasModel) {
       _updateCanvasModelWithLastValues();
@@ -79,6 +89,9 @@ mixin CanvasControlPolicy on BasePolicySet {
     canUpdateCanvasModel = false;
   }
 
+  /// 마우스 휠/트랙패드 스크롤 등 포인터 시그널을 캔버스 이동/줌으로 변환합니다.
+  ///
+  /// - [event]: PointerScrollEvent 등
   void onCanvasPointerSignal(PointerSignalEvent event) {
     // PointerScrollEvent 처리 - 장치 타입에 따라 다르게 처리
     if (event is PointerScrollEvent) {
@@ -119,6 +132,10 @@ mixin CanvasControlPolicy on BasePolicySet {
     }
   }
 
+  /// [focalPoint]를 기준으로 [zoomFactor]만큼 줌 인/아웃합니다.
+  ///
+  /// - [zoomFactor]: `> 1`이면 확대, `< 1`이면 축소
+  /// - [focalPoint]: 줌의 기준점(위젯 로컬 좌표)
   void zoomTowards({
     required double zoomFactor,
     required Offset focalPoint,
@@ -231,6 +248,10 @@ mixin CanvasControlPolicy on BasePolicySet {
         canvasReader.state.minScale, canvasReader.state.maxScale);
   }
 
+  /// 스케일 변경값([scale])을 현재 스케일([canvasScale])과 min/max 범위에 맞게 보정합니다.
+  ///
+  /// - [scale]: “곱해질 값” 형태의 스케일 변화량(예: 1.1, 0.9)
+  /// - [canvasScale]: 현재 캔버스의 절대 스케일
   double keepScaleInBounds(double scale, double canvasScale) {
     double scaleResult = scale;
     if (scale * canvasScale <= canvasReader.state.minScale) {
